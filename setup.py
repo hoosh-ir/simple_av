@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'SimpleAV = simple_av.simple_av:main'
         ],
     },
 )

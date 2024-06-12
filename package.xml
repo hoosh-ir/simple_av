@@ -7,10 +7,23 @@
   <maintainer email="hrhhemati@gmail.com">hamid_ubuntu</maintainer>
   <license>TODO: License declaration</license>
 
+ <build_depend>rclpy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>autoware_auto_vehicle_msgs</build_depend>
+  <build_depend>autoware_auto_control_msgs</build_depend>
+  <build_depend>builtin_interfaces</build_depend>
+
+  <exec_depend>autoware_auto_control_msgs</exec_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>autoware_auto_vehicle_msgs</exec_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
+  <exec_depend>custom_interfaces</exec_depend>
+
 
   <export>
     <build_type>ament_python</build_type>
