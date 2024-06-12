@@ -34,7 +34,7 @@ class Localization(Node):
 
     def load_map(self):
         # Get the path to the resource directory
-        package_share_directory = get_package_share_directory('inspector')
+        package_share_directory = get_package_share_directory('simple_av')
         json_file_path = os.path.join(package_share_directory, 'resource', 'map.json')
         
         # Load and read the JSON file
@@ -155,12 +155,11 @@ class Localization(Node):
         )
 
 
-
 def main(args=None):
     rclpy.init(args=args)
     node = Localization()
-    node.display()
-    # rclpy.spin(node)
+    # node.display()
+    rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
 
