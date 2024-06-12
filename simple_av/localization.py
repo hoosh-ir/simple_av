@@ -8,6 +8,7 @@ class Localization(Node):
     def __init__(self):
         super().__init__('localization')
         self.map_data = self.load_map()
+        self.map_data = self.map_data["LaneLetsArray"]
 
     def load_map(self):
         # Get the path to the resource directory
@@ -18,14 +19,38 @@ class Localization(Node):
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
             return map_data
+
+    def display_lanes(self, displayTrafficLight = False):
+        for lanelet in self.map_data:
+            if displayTrafficLight:
+                if len(lanelet['trafficlightsWayIDs']) > 0:
+                    self.display_lane(lanelet)
+            else:
+                self.display_lane(lanelet)
+  
+    def display_lane(self, lanelet):
+        if lanelet is None:
+            self.get_logger().info("Lane Not exists")
+        else:
+            self.get_logger().info(
+                f"Lanelet Name: {lanelet['name']}\n"
+                "Waypoints:\n" +
+                ''.join(f"  x: {waypoint['x']}, y: {waypoint['y']}, z: {waypoint['z']}\n" for waypoint in lanelet['waypoints']) +
+                f"Previous Lanes: {lanelet['prevLanes']}\n"
+                f"Next Lanes: {lanelet['nextLanes']}\n"
+                f"Traffic Lights Way IDs: {lanelet['trafficlightsWayIDs']}\n"
+                f"Stop Line Pose P1: {lanelet['stopLinePoseP1']}\n"
+                f"Stop Line Pose P2: {lanelet['stopLinePoseP2']}\n"
+            )
     
-    def display_map(self):
-        self.get_logger().info(f'Map data loaded: {self.map_data}')
+    def localization(self):
+        self.display_lanes()
+
 
 def main(args=None):
     rclpy.init(args=args)
     node = Localization()
-    node.display_map()
+    node.display_lanes()
     rclpy.shutdown()
 
 if __name__ == '__main__':
