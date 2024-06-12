@@ -20,6 +20,7 @@ class Localization(Node):
             map_data = json.load(json_file)
             return map_data
 
+    # Prints the whole json map file
     def display_lanes(self, displayTrafficLight = False):
         for lanelet in self.map_data:
             if displayTrafficLight:
@@ -28,6 +29,7 @@ class Localization(Node):
             else:
                 self.display_lane(lanelet)
   
+    # Prints the given Lanelet from the Json map file
     def display_lane(self, lanelet):
         if lanelet is None:
             self.get_logger().info("Lane Not exists")
@@ -43,14 +45,22 @@ class Localization(Node):
                 f"Stop Line Pose P2: {lanelet['stopLinePoseP2']}\n"
             )
     
+    # Method to get the desiered lane by name, returns the founded Lanelet
+    def get_lane(self, lane_name):
+        lane_number = lane_name.replace("TrafficLane", "")
+        lane_number = int(lane_number)
+        if lane_number > len(self.map_data):
+            return None
+        return self.map_data[lane_number - 1]
+
     def localization(self):
-        self.display_lanes()
+        self.display_lane(self.get_lane("TrafficLane423"))
 
 
 def main(args=None):
     rclpy.init(args=args)
     node = Localization()
-    node.display_lanes()
+    node.localization()
     rclpy.shutdown()
 
 if __name__ == '__main__':
