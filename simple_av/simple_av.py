@@ -35,8 +35,23 @@ class Data_box(Node):
     def report_callback(self, msg):
         self.report = msg
 
+
     def get_latest_messages(self):
         return self.pose, self.report
+
+    def update(self):
+        pose_msg, report_msg = self.get_latest_messages()
+        if pose_msg and report_msg:
+            self.get_logger().info(
+                f'Received Pose :\n'
+                f'Position - x: {pose_msg.pose.position.x}, y = {pose_msg.pose.position.y}, z = {pose_msg.pose.position.z}\n'
+                f'Received Velocity Report:\n'
+                f'sec: {report_msg.header.stamp.sec}\n'
+                f'Longitudinal Velocity: {report_msg.longitudinal_velocity}, Lateral Velocity: {report_msg.lateral_velocity}\n'
+                f'Heading Rate: {report_msg.heading_rate}\n'
+            )
+            self.get_logger().info("-------------------------------------------------------------------------------------")
+    
 
 
 
@@ -46,19 +61,7 @@ def main(args=None):
 
     while rclpy.ok():
         rclpy.spin_once(node)
-        pose_msg, report_msg = node.get_latest_messages()
-        if pose_msg and report_msg:
-            node.get_logger().info(
-                f'Received Pose :\n'
-                f'Position - x: {pose_msg.pose.position.x}, y = {pose_msg.pose.position.y}, z = {pose_msg.pose.position.z}\n'
-                f'Received Velocity Report:\n'
-                f'sec: {report_msg.header.stamp.sec}\n'
-                f'Longitudinal Velocity: {report_msg.longitudinal_velocity}, Lateral Velocity: {report_msg.lateral_velocity}\n'
-                f'Heading Rate: {report_msg.heading_rate}\n'
-            )
-            node.get_logger().info("-------------------------------------------------------------------------------------")
-    
-        
+        node.update()
     node.destroy_node()
     rclpy.shutdown()
 
