@@ -12,7 +12,7 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPo
 
 class Data_box(Node):
     def __init__(self):
-        super().__init__('gnss_pose_subscriber')
+        super().__init__('control')
 
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
