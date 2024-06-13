@@ -19,31 +19,42 @@ class Point:
         distance = math.sqrt(dx**2 + dy**2 + dz**2)
         return distance
 
+    def get_point(self):
+        return self.x, self.y, self.z
+
 class Localization(Node):
     def __init__(self):
         super().__init__('localization')
+        # Load the Json map
         self.map_data = self.load_map()
         self.map_data = self.map_data["LaneLetsArray"]
 
+        # Create subscriber to gnss/pos topic
         self.subscriptionPose = self.create_subscription(
             PoseStamped,
             '/sensing/gnss/pose',
-            self.localization,
+            self.pose_callback,
             10
         )
+        self.pose_msg = None
+        self.isGlobalPositioningDone = False
 
     def load_map(self):
         # Get the path to the resource directory
         package_share_directory = get_package_share_directory('simple_av')
         json_file_path = os.path.join(package_share_directory, 'resource', 'map.json')
-        
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
             return map_data
 
-    # Prints the whole json map file
-    def display_lanes(self, displayTrafficLight = False):
+    def pose_callback(self, msg):
+        self.pose_msg = msg
+    
+    def get_pose_msg(self):
+        return self.pose_msg
+    
+    def display_map(self, displayTrafficLight = False):
         for lanelet in self.map_data:
             if displayTrafficLight:
                 if len(lanelet['trafficlightsWayIDs']) > 0:
@@ -139,27 +150,38 @@ class Localization(Node):
 
         return closest_points[0], closest_lane_names, min_distance
 
-    def display(self):
-        self.display_lanes()
+    # This method calls at the first iteration of this node to find the location of the vehicle. This method compares the position of the starting
+    # Point of the vehicle to all the points in lanes in Json map file.
+    def global_positioning(self):
+        msg = self.get_pose_msg()
+        if msg:
+            current_position = Point(msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
+            closest_point, closest_lane_names, min_distance = self.find_closest_point_and_lane(current_position)
+            self.get_logger().info(
+                f'Received Pose :\n'
+                f'Position - x: {msg.pose.position.x}, y = {msg.pose.position.y}, z = {msg.pose.position.z}\n'
+                f'Closest point: {closest_point.get_point()}\n'
+                f'Closest Lanes:\n' +
+                ''.join(f"{lane}, \n" for lane in closest_lane_names) +
+                f'Minimum distance - {min_distance}\n'
+            )
 
-    def localization(self, msg):
-        current_position = Point(msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
-        closest_point, closest_lane_names, min_distance = self.find_closest_point_and_lane(current_position)
-        self.get_logger().info(
-            f'Received Pose :\n'
-            f'Position - x: {msg.pose.position.x}, y = {msg.pose.position.y}, z = {msg.pose.position.z}\n'
-            f'Closest point: {closest_point}\n'
-            f'Closest Lanes: {closest_point}\n' +
-            ''.join(f"{lane}, \n" for lane in closest_lane_names) +
-            f'Minimum distance - {min_distance}\n'
-        )
+    def local_positioning(self):
+        self.get_logger().info("local positioning")
 
+    def localization(self):
+        if not self.isGlobalPositioningDone:
+            self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
+            self.global_positioning()
+            self.isGlobalPositioningDone = True
+        self.local_positioning()
 
 def main(args=None):
     rclpy.init(args=args)
     node = Localization()
-    # node.display()
-    rclpy.spin(node)
+    while rclpy.ok():
+        rclpy.spin_once(node)
+        node.localization()
     node.destroy_node()
     rclpy.shutdown()
 
