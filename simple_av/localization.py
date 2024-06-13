@@ -103,6 +103,21 @@ class Localization(Node):
         return self.map_data[lane_number - 1]
 
     def build_search_area(self, closest_lane_names):
+        """
+        Builds a search area by exploring connected lanes from the closest lanes identified.
+
+        Args:
+        - closest_lane_names (list): List of lane names considered closest to the vehicle.
+
+        Returns:
+        - unique_elements (set): A set of unique lane names forming the search area.
+
+        Explanation:
+        - Iterates through each lane in closest_lane_names to explore connected lanes.
+        - Uses BFS (Breadth-First Search) approach to traverse through connected lanes up to a specified depth.
+        - Adds each visited lane to a set to ensure uniqueness in the search area.
+        - Returns a set of unique lane names representing the search area surrounding the vehicle.
+        """
         search_areas = []
         for current_lane_name in closest_lane_names:
             search_area = set()
@@ -125,22 +140,23 @@ class Localization(Node):
 
     def find_closest_point_and_lane(self, current_position, search_lanes=None):
         """
-        Finds the closest point(s) to the initial_point among the waypoints of all lanes provided in lanes_data.
-        
+        Finds the closest point(s) to the current_position among the waypoints of specified lanes or all lanes.
+
         Args:
         - current_position (Point): The point to which distances are compared.
-        
+        - search_lanes (list, optional): List of lane names to search for closest points. If None, searches all lanes.
+
         Returns:
         - closest_points (list): A list of Point objects representing the closest point(s) found.
         - closest_lane_names (list): A list of strings representing the lane name(s) corresponding to the closest point(s).
-        - min_distance (float): The minimum distance found from initial_point to the closest point(s).
-        
-        Comments:
-        - Iterates through each lane in lanes_data.
-        - For each waypoint in a lane, calculates the distance to initial_point using Point.distance_to method.
+        - min_distance (float): The minimum distance found from current_position to the closest point(s).
+
+        Explanation:
+        - Searches for the closest point(s) among specified lanes or all lanes if search_lanes is None.
+        - Uses the Point.distance_to method to calculate distances between current_position and waypoints.
         - Updates closest_points, closest_lane_names, and min_distance when a closer point is found.
         - Handles cases where multiple points have the same minimum distance by keeping all of them.
-        - If more than one closest point is found, removes points and lane names that do not match the minimum distance.
+        - Returns the closest point(s), corresponding lane names, and the minimum distance found.
         """
         closest_points = []
         closest_lane_names = []
@@ -193,9 +209,21 @@ class Localization(Node):
 
         return closest_points[0], closest_lane_names, min_distance
 
-    # This method calls at the first iteration of this node to find the location of the vehicle. This method compares the position of the starting
-    # Point of the vehicle to all the points in lanes in Json map file.
     def global_positioning(self):
+        """
+        Performs global positioning by finding the closest lane and point to the initial vehicle position.
+
+        Returns:
+        - closest_point (Point or None): The closest point found in the lane waypoints.
+        - closest_lane_names (list): List of lane names where the closest points are found.
+        - min_distance (float): The minimum distance found to the closest point.
+
+        Explanation:
+        - Retrieves the current vehicle position from the pose message.
+        - Uses find_closest_point_and_lane method to find the closest point(s) among all lanes.
+        - Displays the vehicle's position and closest lane information.
+        - Returns the closest point(s), corresponding lane names, and minimum distance found.
+        """
         pose_msg = self.get_pose_msg()
         if pose_msg:
             self.isGlobalPositioningDone = True
@@ -207,6 +235,26 @@ class Localization(Node):
     
     # Finds the lane, and the point of the vehicle. uses previous positioning values to narrow the search area
     def local_positioning(self, closest_point, closest_lane_names, min_distance):
+        """
+        Performs local positioning using previous closest lane names to narrow down the search area.
+
+        Args:
+        - closest_point (Point): The previously found closest point to the vehicle.
+        - closest_lane_names (list): List of lane names from the previous positioning.
+        - min_distance (float): The minimum distance found in the previous positioning.
+
+        Returns:
+        - closest_point (Point or None): The closest point found in the local search area.
+        - closest_lane_names (list): List of lane names where the closest points are found.
+        - min_distance (float): The minimum distance found to the closest point.
+
+        Explanation:
+        - Builds a local search area based on previous closest lane names using build_search_area method.
+        - Retrieves the current vehicle position from the pose message.
+        - Uses find_closest_point_and_lane method to find the closest point(s) among the local search area.
+        - Displays the vehicle's position and closest lane information.
+        - Returns the closest point(s), corresponding lane names, and minimum distance found in the local search.
+        """
         if not closest_lane_names:
             self.get_logger().info("No closest lane names found, skipping local positioning")
             return closest_point, closest_lane_names, min_distance
@@ -220,6 +268,14 @@ class Localization(Node):
             return closest_point, closest_lane_names, min_distance
 
     def localization(self):
+        """
+        Performs localization by first attempting global positioning, then local positioning.
+
+        Explanation:
+        - Checks if global positioning has been performed; if not, calls global_positioning to perform it.
+        - If already globally positioned, calls local_positioning using previous closest point and lane names.
+        - Continues to update self.closest_point, self.closest_lane_names, and self.min_distance accordingly.
+        """
         if not self.isGlobalPositioningDone:
             self.closest_point, self.closest_lane_names, self.min_distance = self.global_positioning()
         else:
