@@ -38,6 +38,7 @@ class Localization(Node):
         )
         self.pose_msg = None
         self.isGlobalPositioningDone = False
+        self.local_positioning_depth_search = 2
 
     def load_map(self):
         # Get the path to the resource directory
@@ -76,6 +77,16 @@ class Localization(Node):
                 f"Traffic Lights Way IDs: {lanelet['trafficlightsWayIDs']}\n"
                 f"Stop Line Pose P1: {lanelet['stopLinePoseP1']}\n"
                 f"Stop Line Pose P2: {lanelet['stopLinePoseP2']}\n"
+            )
+
+    def display_vehicle_position(self, msg_pose, closest_point, closest_lane_names, min_distance):
+        self.get_logger().info(
+                f'Received Pose :\n'
+                f'Position - x: {msg_pose.pose.position.x}, y = {msg_pose.pose.position.y}, z = {msg_pose.pose.position.z}\n'
+                f'Closest point: {closest_point.get_point()}\n'
+                f'Closest Lanes:\n' +
+                ''.join(f"{lane}, \n" for lane in closest_lane_names) +
+                f'Minimum distance - {min_distance}\n'
             )
     
     # Method to get the desiered lane by name, returns the founded Lanelet
@@ -153,22 +164,15 @@ class Localization(Node):
     # This method calls at the first iteration of this node to find the location of the vehicle. This method compares the position of the starting
     # Point of the vehicle to all the points in lanes in Json map file.
     def global_positioning(self):
-        msg = self.get_pose_msg()
+        psoe_msg = self.get_pose_msg()
         print("debug 0")
-        if msg:
+        if psoe_msg:
             print("debug 1")
             self.isGlobalPositioningDone = True
-            current_position = Point(msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
+            current_position = Point(psoe_msg.pose.position.x, psoe_msg.pose.position.y, psoe_msg.pose.position.z)
             closest_point, closest_lane_names, min_distance = self.find_closest_point_and_lane(current_position)
-            self.get_logger().info(
-                f'Received Pose :\n'
-                f'Position - x: {msg.pose.position.x}, y = {msg.pose.position.y}, z = {msg.pose.position.z}\n'
-                f'Closest point: {closest_point.get_point()}\n'
-                f'Closest Lanes:\n' +
-                ''.join(f"{lane}, \n" for lane in closest_lane_names) +
-                f'Minimum distance - {min_distance}\n'
-            )
-        # return closest_point, closest_lane_names, min_distance
+            self.display_vehicle_position(psoe_msg, closest_point, closest_lane_names, min_distance)
+            return closest_point, closest_lane_names, min_distance
 
     def local_positioning(self):
         self.get_logger().info("local positioning")
