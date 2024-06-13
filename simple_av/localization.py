@@ -40,6 +40,11 @@ class Localization(Node):
         self.isGlobalPositioningDone = False
         self.local_positioning_depth_search = 2
 
+        # Initialize instance variables for storing closest point and lanes
+        self.closest_point = None
+        self.closest_lane_names = []
+        self.min_distance = float('inf')
+
     def load_map(self):
         # Get the path to the resource directory
         package_share_directory = get_package_share_directory('simple_av')
@@ -164,25 +169,54 @@ class Localization(Node):
     # This method calls at the first iteration of this node to find the location of the vehicle. This method compares the position of the starting
     # Point of the vehicle to all the points in lanes in Json map file.
     def global_positioning(self):
-        psoe_msg = self.get_pose_msg()
-        print("debug 0")
-        if psoe_msg:
-            print("debug 1")
+        pose_msg = self.get_pose_msg()
+        if pose_msg:
             self.isGlobalPositioningDone = True
-            current_position = Point(psoe_msg.pose.position.x, psoe_msg.pose.position.y, psoe_msg.pose.position.z)
+            current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             closest_point, closest_lane_names, min_distance = self.find_closest_point_and_lane(current_position)
-            self.display_vehicle_position(psoe_msg, closest_point, closest_lane_names, min_distance)
+            self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
             return closest_point, closest_lane_names, min_distance
+        return None, [], float('inf')
 
-    def local_positioning(self):
+    def build_search_area(self, closest_lane_names):
+        search_areas = []
+        for current_lane_name in closest_lane_names:
+            search_area = set()
+            lanes_to_visit = [(current_lane_name, 0)]
+            while lanes_to_visit:
+                lane_name, depth = lanes_to_visit.pop(0)
+                if lane_name not in search_area and depth <= self.local_positioning_depth_search:
+                    search_area.add(lane_name)
+                    for lane in self.map_data:
+                        if lane['name'] == lane_name:
+                            lanes_to_visit.extend([(next_lane, depth + 1) for next_lane in lane.get('nextLanes', [])])
+                            lanes_to_visit.extend([(prev_lane, depth + 1) for prev_lane in lane.get('prevLanes', [])])
+            search_areas.append(list(search_area))
+        
+        unique_elements = set()  # Using a set to store unique elements
+        for search_area in search_areas:
+            for element in search_area:
+                unique_elements.add(element)  # Add each element to the set
+        return unique_elements
+    
+    # Finds the lane, and the point of the vehicle. uses previous positioning values to narrow the search area
+    def local_positioning(self, closest_point, closest_lane_names, min_distance):
         self.get_logger().info("local positioning")
+        print(closest_lane_names)
+        if not closest_lane_names:
+            self.get_logger().info("No closest lane names found, skipping local positioning")
+            return closest_point, closest_lane_names, min_distance
+        
+        search_area = self.build_search_area(closest_lane_names)
+        print(search_area)
+        return closest_point, closest_lane_names, min_distance
 
     def localization(self):
         if not self.isGlobalPositioningDone:
             self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
-            self.global_positioning()
+            self.closest_point, self.closest_lane_names, self.min_distance = self.global_positioning()
         else:
-            self.local_positioning()
+            self.closest_point, self.closest_lane_names, self.min_distance = self.local_positioning(self.closest_point, self.closest_lane_names, self.min_distance)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -190,7 +224,7 @@ def main(args=None):
     try:
         while rclpy.ok():
             node.isGlobalPositioningDone
-            rclpy.spin_once(node, timeout_sec=0.01)  # Set timeout to 0 to avoid delay
+            rclpy.spin_once(node, timeout_sec=1.0)  # Set timeout to 0 to avoid delay
             node.localization()
     finally:
         node.destroy_node()
