@@ -233,7 +233,6 @@ class Localization(Node):
             return closest_point, closest_lane_names, min_distance
         return None, [], float('inf')
     
-    # Finds the lane, and the point of the vehicle. uses previous positioning values to narrow the search area
     def local_positioning(self, closest_point, closest_lane_names, min_distance):
         """
         Performs local positioning using previous closest lane names to narrow down the search area.
@@ -287,7 +286,7 @@ def main(args=None):
     try:
         while rclpy.ok():
             node.isGlobalPositioningDone
-            rclpy.spin_once(node, timeout_sec=2.0)  # Set timeout to 0 to avoid delay
+            rclpy.spin_once(node, timeout_sec=0.01)  # Set timeout to 0 to avoid delay
             node.localization()
     finally:
         node.destroy_node()
