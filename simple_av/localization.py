@@ -96,14 +96,34 @@ class Localization(Node):
     
     # Method to get the desiered lane by name, returns the founded Lanelet
     def get_lane(self, lane_name):
-        lane_number = lane_name.replace("TrafficLane", "")
+        lane_number = lane_name.replace("lanelet", "")
         lane_number = int(lane_number)
         if lane_number > len(self.map_data):
             return None
         return self.map_data[lane_number - 1]
 
+    def build_search_area(self, closest_lane_names):
+        search_areas = []
+        for current_lane_name in closest_lane_names:
+            search_area = set()
+            lanes_to_visit = [(current_lane_name, 0)]
+            while lanes_to_visit:
+                lane_name, depth = lanes_to_visit.pop(0)
+                if lane_name not in search_area and depth <= self.local_positioning_depth_search:
+                    search_area.add(lane_name)
+                    for lane in self.map_data:
+                        if lane['name'] == lane_name:
+                            lanes_to_visit.extend([(next_lane, depth + 1) for next_lane in lane.get('nextLanes', [])])
+                            lanes_to_visit.extend([(prev_lane, depth + 1) for prev_lane in lane.get('prevLanes', [])])
+            search_areas.append(list(search_area))
+        
+        unique_elements = set()  # Using a set to store unique elements
+        for search_area in search_areas:
+            for element in search_area:
+                unique_elements.add(element)  # Add each element to the set
+        return unique_elements
 
-    def find_closest_point_and_lane(self, current_position):
+    def find_closest_point_and_lane(self, current_position, search_lanes=None):
         """
         Finds the closest point(s) to the initial_point among the waypoints of all lanes provided in lanes_data.
         
@@ -126,9 +146,16 @@ class Localization(Node):
         closest_lane_names = []
         min_distance = float('inf')
 
-        for lane in self.map_data:
-            lane_name = lane['name']
-            waypoints = lane['waypoints']
+        lanes_to_search = search_lanes if search_lanes else self.map_data
+
+        for lane in lanes_to_search:
+            if search_lanes:
+               lane_name = lane
+               lanelet_obj = self.get_lane(lane)
+               waypoints = lanelet_obj['waypoints']
+            else:
+                lane_name = lane['name']
+                waypoints = lane['waypoints']
 
             for waypoint in waypoints:
                 x = waypoint['x']
@@ -177,43 +204,23 @@ class Localization(Node):
             self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
             return closest_point, closest_lane_names, min_distance
         return None, [], float('inf')
-
-    def build_search_area(self, closest_lane_names):
-        search_areas = []
-        for current_lane_name in closest_lane_names:
-            search_area = set()
-            lanes_to_visit = [(current_lane_name, 0)]
-            while lanes_to_visit:
-                lane_name, depth = lanes_to_visit.pop(0)
-                if lane_name not in search_area and depth <= self.local_positioning_depth_search:
-                    search_area.add(lane_name)
-                    for lane in self.map_data:
-                        if lane['name'] == lane_name:
-                            lanes_to_visit.extend([(next_lane, depth + 1) for next_lane in lane.get('nextLanes', [])])
-                            lanes_to_visit.extend([(prev_lane, depth + 1) for prev_lane in lane.get('prevLanes', [])])
-            search_areas.append(list(search_area))
-        
-        unique_elements = set()  # Using a set to store unique elements
-        for search_area in search_areas:
-            for element in search_area:
-                unique_elements.add(element)  # Add each element to the set
-        return unique_elements
     
     # Finds the lane, and the point of the vehicle. uses previous positioning values to narrow the search area
     def local_positioning(self, closest_point, closest_lane_names, min_distance):
-        self.get_logger().info("local positioning")
-        print(closest_lane_names)
         if not closest_lane_names:
             self.get_logger().info("No closest lane names found, skipping local positioning")
             return closest_point, closest_lane_names, min_distance
-        
-        search_area = self.build_search_area(closest_lane_names)
-        print(search_area)
-        return closest_point, closest_lane_names, min_distance
+        local_search_area = self.build_search_area(closest_lane_names)
+        print(local_search_area)
+        pose_msg = self.get_pose_msg()
+        if pose_msg:
+            current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
+            closest_point, closest_lane_names, min_distance = self.find_closest_point_and_lane(current_position, local_search_area)
+            self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
+            return closest_point, closest_lane_names, min_distance
 
     def localization(self):
         if not self.isGlobalPositioningDone:
-            self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.closest_point, self.closest_lane_names, self.min_distance = self.global_positioning()
         else:
             self.closest_point, self.closest_lane_names, self.min_distance = self.local_positioning(self.closest_point, self.closest_lane_names, self.min_distance)
@@ -224,7 +231,7 @@ def main(args=None):
     try:
         while rclpy.ok():
             node.isGlobalPositioningDone
-            rclpy.spin_once(node, timeout_sec=1.0)  # Set timeout to 0 to avoid delay
+            rclpy.spin_once(node, timeout_sec=2.0)  # Set timeout to 0 to avoid delay
             node.localization()
     finally:
         node.destroy_node()
