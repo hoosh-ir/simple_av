@@ -154,7 +154,10 @@ class Localization(Node):
     # Point of the vehicle to all the points in lanes in Json map file.
     def global_positioning(self):
         msg = self.get_pose_msg()
+        print("debug 0")
         if msg:
+            print("debug 1")
+            self.isGlobalPositioningDone = True
             current_position = Point(msg.pose.position.x, msg.pose.position.y, msg.pose.position.z)
             closest_point, closest_lane_names, min_distance = self.find_closest_point_and_lane(current_position)
             self.get_logger().info(
@@ -165,6 +168,7 @@ class Localization(Node):
                 ''.join(f"{lane}, \n" for lane in closest_lane_names) +
                 f'Minimum distance - {min_distance}\n'
             )
+        # return closest_point, closest_lane_names, min_distance
 
     def local_positioning(self):
         self.get_logger().info("local positioning")
@@ -173,15 +177,20 @@ class Localization(Node):
         if not self.isGlobalPositioningDone:
             self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.global_positioning()
-            self.isGlobalPositioningDone = True
-        self.local_positioning()
+        else:
+            self.local_positioning()
 
 def main(args=None):
     rclpy.init(args=args)
     node = Localization()
-    while rclpy.ok():
-        rclpy.spin_once(node)
-        node.localization()
+    try:
+        while rclpy.ok():
+            node.isGlobalPositioningDone
+            rclpy.spin_once(node, timeout_sec=0.01)  # Set timeout to 0 to avoid delay
+            node.localization()
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
     node.destroy_node()
     rclpy.shutdown()
 
