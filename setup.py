@@ -23,8 +23,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'Controller = simple_av.control:main',
-            'Localization = simple_av.localization:main'
+            'controller = simple_av.control:main',
+            'localization = simple_av.localization:main',
+            'planning = simple_av.Path_planning:main'
         ],
     },
 )

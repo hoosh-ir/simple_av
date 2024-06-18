@@ -4,7 +4,9 @@ import json
 import os
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Point as GeoPoint
 import math
+from custom_interface.msg import LocationMsg
 
 class Point:
     def __init__(self, x=0.0, y=0.0, z=0.0):
@@ -36,6 +38,10 @@ class Localization(Node):
             self.pose_callback,
             10
         )
+
+        # Initialize the publisher
+        self.localization_publisher = self.create_publisher(LocationMsg, 'location', 10)
+
         self.pose_msg = None
         self.isGlobalPositioningDone = False
         self.local_positioning_depth_search = 2
@@ -215,7 +221,7 @@ class Localization(Node):
         if pose_msg:
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             closest_point, closest_lane_names, min_distance = self.get_closest_point_and_lane(current_position)
-            self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
+            # self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
             self.isGlobalPositioningDone = True
             return closest_point, closest_lane_names, min_distance
         return None, [], float('inf')
@@ -242,15 +248,15 @@ class Localization(Node):
         - Returns the closest point(s), corresponding lane names, and minimum distance found in the local search.
         """
         if not closest_lane_names:
-            self.get_logger().info("No closest lane names found, skipping local positioning")
+            # self.get_logger().info("No closest lane names found, skipping local positioning")
             return closest_point, closest_lane_names, min_distance
         local_search_area = self.build_search_area(closest_lane_names)
-        print(local_search_area)
+        # print(local_search_area)
         pose_msg = self.get_pose_msg()
         if pose_msg:
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             closest_point, closest_lane_names, min_distance = self.get_closest_point_and_lane(current_position, local_search_area)
-            self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
+            # self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
             return closest_point, closest_lane_names, min_distance
 
     def get_vehicle_heading():
@@ -266,16 +272,26 @@ class Localization(Node):
         - Continues to update self.closest_point, self.closest_lane_names, and self.min_distance accordingly.
         """
         if not self.isGlobalPositioningDone:
+            self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.closest_point, self.closest_lane_names, self.min_distance = self.global_positioning()
         else:
+            self.get_logger().info("Local positioning")
             self.closest_point, self.closest_lane_names, self.min_distance = self.local_positioning(self.closest_point, self.closest_lane_names, self.min_distance)
+            self.publish_vehicle_location(self.closest_point, self.closest_lane_names, self.min_distance)
+
+    def publish_vehicle_location(self, closest_point, closest_lane_names, min_distance):
+        localization_result = LocationMsg()
+        localization_result.closest_point = GeoPoint(x=closest_point.x, y=closest_point.y, z=closest_point.z)
+        localization_result.closest_lane_names = closest_lane_names
+        localization_result.minimal_distance = min_distance
+        self.localization_publisher.publish(localization_result)
+
 
 def main(args=None):
     rclpy.init(args=args)
     node = Localization()
     try:
         while rclpy.ok():
-            node.isGlobalPositioningDone
             rclpy.spin_once(node, timeout_sec=0.01)  # Set timeout to 0 to avoid delay
             node.localization()
     finally:
