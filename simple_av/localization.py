@@ -40,7 +40,7 @@ class Localization(Node):
         )
 
         # Initialize the publisher
-        self.localization_publisher = self.create_publisher(LocationMsg, 'location', 10)
+        self.localization_publisher = self.create_publisher(LocationMsg, 'localization/location', 10)
 
         self.pose_msg = None
         self.isGlobalPositioningDone = False
