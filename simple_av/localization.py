@@ -102,6 +102,7 @@ class Localization(Node):
             return None
         return self.map_data[lane_number - 1]
 
+    # TODO: Adjacent Lane
     def build_search_area(self, closest_lane_names):
         """
         Builds a search area by exploring connected lanes from the closest lanes identified.
@@ -138,7 +139,7 @@ class Localization(Node):
                 unique_elements.add(element)  # Add each element to the set
         return unique_elements
 
-    def find_closest_point_and_lane(self, current_position, search_lanes=None):
+    def get_closest_point_and_lane(self, current_position, search_lanes=None):
         """
         Finds the closest point(s) to the current_position among the waypoints of specified lanes or all lanes.
 
@@ -166,9 +167,9 @@ class Localization(Node):
 
         for lane in lanes_to_search:
             if search_lanes:
-               lane_name = lane
-               lanelet_obj = self.get_lane(lane)
-               waypoints = lanelet_obj['waypoints']
+                lane_name = lane
+                lanelet_obj = self.get_lane(lane)
+                waypoints = lanelet_obj['waypoints']
             else:
                 lane_name = lane['name']
                 waypoints = lane['waypoints']
@@ -184,28 +185,14 @@ class Localization(Node):
                 if distance < min_distance:
                     min_distance = distance
                     if closest_lane_names and closest_points:
-                        closest_lane_names.pop()
-                        closest_points.pop()
+                        closest_lane_names.clear()
+                        closest_points.clear()
                     closest_points.append(point)
                     closest_lane_names.append(lane_name)
                 elif distance == min_distance:
                     min_distance = distance
                     closest_points.append(point)
                     closest_lane_names.append(lane_name)
-
-        if len(closest_points) > 1:
-            points_to_remove = []
-            lane_names_to_remove = []
-            for i in range(len(closest_points)):
-                distance = current_position.distance_to(closest_points[i])
-                if distance != min_distance:
-                    points_to_remove.append(closest_points[i])
-                    lane_names_to_remove.append(closest_lane_names[i])
-
-            for point in points_to_remove:
-                closest_points.remove(point)
-            for lane in lane_names_to_remove:
-                closest_lane_names.remove(lane)
 
         return closest_points[0], closest_lane_names, min_distance
 
@@ -220,16 +207,16 @@ class Localization(Node):
 
         Explanation:
         - Retrieves the current vehicle position from the pose message.
-        - Uses find_closest_point_and_lane method to find the closest point(s) among all lanes.
+        - Uses get_closest_point_and_lane method to find the closest point(s) among all lanes.
         - Displays the vehicle's position and closest lane information.
         - Returns the closest point(s), corresponding lane names, and minimum distance found.
         """
         pose_msg = self.get_pose_msg()
         if pose_msg:
-            self.isGlobalPositioningDone = True
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
-            closest_point, closest_lane_names, min_distance = self.find_closest_point_and_lane(current_position)
+            closest_point, closest_lane_names, min_distance = self.get_closest_point_and_lane(current_position)
             self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
+            self.isGlobalPositioningDone = True
             return closest_point, closest_lane_names, min_distance
         return None, [], float('inf')
     
@@ -250,7 +237,7 @@ class Localization(Node):
         Explanation:
         - Builds a local search area based on previous closest lane names using build_search_area method.
         - Retrieves the current vehicle position from the pose message.
-        - Uses find_closest_point_and_lane method to find the closest point(s) among the local search area.
+        - Uses get_closest_point_and_lane method to find the closest point(s) among the local search area.
         - Displays the vehicle's position and closest lane information.
         - Returns the closest point(s), corresponding lane names, and minimum distance found in the local search.
         """
@@ -262,9 +249,12 @@ class Localization(Node):
         pose_msg = self.get_pose_msg()
         if pose_msg:
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
-            closest_point, closest_lane_names, min_distance = self.find_closest_point_and_lane(current_position, local_search_area)
+            closest_point, closest_lane_names, min_distance = self.get_closest_point_and_lane(current_position, local_search_area)
             self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
             return closest_point, closest_lane_names, min_distance
+
+    def get_vehicle_heading():
+        pass
 
     def localization(self):
         """
