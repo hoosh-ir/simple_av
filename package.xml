@@ -22,7 +22,7 @@
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
-  <exec_depend>custom_interface</exec_depend>
+  <exec_depend>simple_av_msgs</exec_depend>
 
 
   <export>

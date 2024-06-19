@@ -5,9 +5,11 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Point as GeoPoint
+from std_msgs.msg import String
 import math
-# from custom_interface.msg import LocationMsg
 from sensor_msgs.msg import Imu
+from simple_av_msgs.msg import LocalizationMsg
+
 
 class Point:
     def __init__(self, x=0.0, y=0.0, z=0.0):
@@ -48,7 +50,7 @@ class Localization(Node):
         )
 
         # Initialize the publisher
-        # self.localization_publisher = self.create_publisher(LocationMsg, 'localization/location', 10)
+        self.localization_publisher = self.create_publisher(LocalizationMsg, 'localization/location', 10)
 
         self.pose_msg = PoseStamped()
         self.imu_msg = Imu()
@@ -57,7 +59,7 @@ class Localization(Node):
 
         # Initialize instance variables for storing closest point and lanes
         self.closest_point = None
-        self.closest_lane_name = None
+        self.closest_lane_name = String()
         self.min_distance = float('inf')
 
     def load_map(self):
@@ -199,7 +201,7 @@ class Localization(Node):
         """
         closest_point = Point()
         closest_lanes_names = []
-        closest_lane_name = None
+        closest_lane_name = String()
         min_distance = float('inf')
 
         lanes_to_search = search_lanes if search_lanes else self.map_data
@@ -296,8 +298,9 @@ class Localization(Node):
         - Displays the vehicle's position and closest lane information.
         - Returns the closest point(s), corresponding lane names, and minimum distance found in the local search.
         """
+        self.get_logger().info(f"debug 0 - closest_lane_name: {closest_lane_name}")
         if not closest_lane_name:
-            # self.get_logger().info("No closest lane names found, skipping local positioning")
+            self.get_logger().info("No closest lane name found, skipping local positioning")
             return closest_point, closest_lane_name, min_distance
         local_search_area = self.build_search_area(closest_lane_name)
         pose_msg = self.get_pose_msg()
@@ -305,6 +308,9 @@ class Localization(Node):
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             closest_point, closest_lane_name, min_distance = self.get_closest_point_and_lane(current_position, local_search_area)
             self.display_vehicle_position(pose_msg, closest_point, closest_lane_name, min_distance)
+            return closest_point, closest_lane_name, min_distance
+        else:
+            self.get_logger().info("debug 1 - local - no pose recieved")
             return closest_point, closest_lane_name, min_distance
 
     def get_vehicle_heading():
@@ -326,14 +332,14 @@ class Localization(Node):
         else:
             self.get_logger().info("Local positioning")
             self.closest_point, self.closest_lane_name, self.min_distance = self.local_positioning(self.closest_point, self.closest_lane_name, self.min_distance)
-            # self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
+            self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
 
-    # def publish_vehicle_location(self, closest_point, closest_lane_name, min_distance):
-    #     localization_result = LocationMsg()
-    #     localization_result.closest_point = GeoPoint(x=closest_point.x, y=closest_point.y, z=closest_point.z)
-    #     localization_result.closest_lane_name = closest_lane_name
-    #     localization_result.minimal_distance = min_distance
-    #     self.localization_publisher.publish(localization_result)
+    def publish_vehicle_location(self, closest_point, closest_lane_name, min_distance):
+        localization_result = LocalizationMsg()
+        localization_result.closest_point = GeoPoint(x=closest_point.x, y=closest_point.y, z=closest_point.z)
+        localization_result.closest_lane_names.data = closest_lane_name
+        localization_result.minimal_distance = min_distance
+        self.localization_publisher.publish(localization_result)
 
 
 def main(args=None):
