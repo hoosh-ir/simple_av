@@ -201,7 +201,7 @@ class Localization(Node):
         - Handles cases where multiple points have the same minimum distance by keeping all of them.
         - Returns the closest point(s), corresponding lane names, and the minimum distance found.
         """
-        closest_points = []
+        closest_point = Point()
         closest_lane_names = []
         min_distance = float('inf')
 
@@ -226,31 +226,18 @@ class Localization(Node):
 
                 if distance < min_distance:
                     min_distance = distance
-                    if closest_lane_names and closest_points:
-                        closest_lane_names.pop()
-                        closest_points.pop()
-                    closest_points.append(point)
+                    closest_point = point
+                    if closest_lane_names:
+                        closest_lane_names.clear()
                     closest_lane_names.append(lane_name)
                 elif distance == min_distance:
-                    min_distance = distance
-                    closest_points.append(point)
                     closest_lane_names.append(lane_name)
         
-        if len(closest_points) > 1:
-            points_to_remove = []
-            lane_names_to_remove = []
-            for i in range(len(closest_points)):
-                distance = current_position.distance_to(closest_points[i])
-                if distance != min_distance:
-                    points_to_remove.append(closest_points[i])
-                    lane_names_to_remove.append(closest_lane_names[i])
+        if len(closest_lane_names) > 1:
+            pass
 
-            for point in points_to_remove:
-                closest_points.remove(point)
-            for lane in lane_names_to_remove:
-                closest_lane_names.remove(lane)
 
-        return closest_points[0], closest_lane_names, min_distance
+        return closest_point, closest_lane_names, min_distance
 
     def global_positioning(self):
         """
@@ -269,7 +256,7 @@ class Localization(Node):
         """
         pose_msg = self.get_pose_msg()
         if pose_msg and pose_msg.pose.position.x != 0 and pose_msg.pose.position.y != 0 and pose_msg.pose.position.z != 0:
-            print(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
+            # print(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             closest_point, closest_lane_names, min_distance = self.get_closest_point_and_lane(current_position)
             self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
@@ -299,7 +286,7 @@ class Localization(Node):
         - Returns the closest point(s), corresponding lane names, and minimum distance found in the local search.
         """
         if not closest_lane_names:
-            self.get_logger().info("No closest lane names found, skipping local positioning")
+            # self.get_logger().info("No closest lane names found, skipping local positioning")
             return closest_point, closest_lane_names, min_distance
         local_search_area = self.build_search_area(closest_lane_names)
         pose_msg = self.get_pose_msg()
