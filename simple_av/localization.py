@@ -7,6 +7,7 @@ from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Point as GeoPoint
 import math
 from custom_interface.msg import LocationMsg
+from sensor_msgs.msg import Imu
 
 class Point:
     def __init__(self, x=0.0, y=0.0, z=0.0):
@@ -39,10 +40,18 @@ class Localization(Node):
             10
         )
 
+        self.subscriptionPose = self.create_subscription(
+            Imu,
+            '/sensing/imu/tamagawa/imu_raw',
+            self.imu_callback,
+            10
+        )
+
         # Initialize the publisher
         self.localization_publisher = self.create_publisher(LocationMsg, 'localization/location', 10)
 
-        self.pose_msg = None
+        self.pose_msg = PoseStamped()
+        self.imu_msg = Imu()
         self.isGlobalPositioningDone = False
         self.local_positioning_depth_search = 2
 
@@ -65,6 +74,33 @@ class Localization(Node):
     
     def get_pose_msg(self):
         return self.pose_msg
+    
+    def imu_callback(self, msg):
+        self.imu_msg = msg
+    
+    def get_imu_msg(self):
+        return self.imu_msg
+    
+    def display_imu(self):
+        imu_msg = self.get_imu_msg()
+        if imu_msg:
+            self.get_logger().info(
+                f"Orientation\n"
+                f"{imu_msg.orientation}\n"
+                f"Orientation Covariance\n"
+                f"{imu_msg.orientation_covariance}\n"
+                f"----------------------------------\n"
+                # f"angular velocity\n"
+                # f"{imu_msg.angular_velocity}\n"
+                # f"angular velocity covariance\n"
+                # f"{imu_msg.angular_velocity_covariance}\n"
+                # f"----------------------------------\n"
+                # f"linear acceleration\n"
+                # f"{imu_msg.linear_acceleration}\n"
+                # f"linear acceleration Covariance\n"
+                # f"{imu_msg.linear_acceleration_covariance}\n"
+                # f"----------------------------------\n"
+                )
     
     def display_map(self, displayTrafficLight = False):
         for lanelet in self.map_data:
@@ -191,14 +227,28 @@ class Localization(Node):
                 if distance < min_distance:
                     min_distance = distance
                     if closest_lane_names and closest_points:
-                        closest_lane_names.clear()
-                        closest_points.clear()
+                        closest_lane_names.pop()
+                        closest_points.pop()
                     closest_points.append(point)
                     closest_lane_names.append(lane_name)
                 elif distance == min_distance:
                     min_distance = distance
                     closest_points.append(point)
                     closest_lane_names.append(lane_name)
+        
+        if len(closest_points) > 1:
+            points_to_remove = []
+            lane_names_to_remove = []
+            for i in range(len(closest_points)):
+                distance = current_position.distance_to(closest_points[i])
+                if distance != min_distance:
+                    points_to_remove.append(closest_points[i])
+                    lane_names_to_remove.append(closest_lane_names[i])
+
+            for point in points_to_remove:
+                closest_points.remove(point)
+            for lane in lane_names_to_remove:
+                closest_lane_names.remove(lane)
 
         return closest_points[0], closest_lane_names, min_distance
 
@@ -218,10 +268,11 @@ class Localization(Node):
         - Returns the closest point(s), corresponding lane names, and minimum distance found.
         """
         pose_msg = self.get_pose_msg()
-        if pose_msg:
+        if pose_msg and pose_msg.pose.position.x != 0 and pose_msg.pose.position.y != 0 and pose_msg.pose.position.z != 0:
+            print(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             closest_point, closest_lane_names, min_distance = self.get_closest_point_and_lane(current_position)
-            # self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
+            self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
             self.isGlobalPositioningDone = True
             return closest_point, closest_lane_names, min_distance
         return None, [], float('inf')
@@ -248,15 +299,14 @@ class Localization(Node):
         - Returns the closest point(s), corresponding lane names, and minimum distance found in the local search.
         """
         if not closest_lane_names:
-            # self.get_logger().info("No closest lane names found, skipping local positioning")
+            self.get_logger().info("No closest lane names found, skipping local positioning")
             return closest_point, closest_lane_names, min_distance
         local_search_area = self.build_search_area(closest_lane_names)
-        # print(local_search_area)
         pose_msg = self.get_pose_msg()
         if pose_msg:
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             closest_point, closest_lane_names, min_distance = self.get_closest_point_and_lane(current_position, local_search_area)
-            # self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
+            self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
             return closest_point, closest_lane_names, min_distance
 
     def get_vehicle_heading():
@@ -271,6 +321,7 @@ class Localization(Node):
         - If already globally positioned, calls local_positioning using previous closest point and lane names.
         - Continues to update self.closest_point, self.closest_lane_names, and self.min_distance accordingly.
         """
+        self.display_imu()
         if not self.isGlobalPositioningDone:
             self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.closest_point, self.closest_lane_names, self.min_distance = self.global_positioning()

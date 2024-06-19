@@ -25,7 +25,7 @@ setup(
         'console_scripts': [
             'controller = simple_av.control:main',
             'localization = simple_av.localization:main',
-            'planning = simple_av.path_planning:main'
+            'planning = simple_av.planning:main'
         ],
     },
 )

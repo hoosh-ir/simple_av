@@ -104,7 +104,7 @@ class Planning(Node):
 
     def path_planning(self):
         start_lanelet = "lanelet1"
-        dest_lanelet = "lanelet252"
+        dest_lanelet = "lanelet109"
         self.path, self.num_transitions = self.bfs(start_lanelet, dest_lanelet)
         self.isPathPlanned = True
     
