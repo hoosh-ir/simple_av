@@ -66,7 +66,7 @@ class Planning(Node):
             )
     
     # Method to get the desiered lane by name, returns the founded Lanelet
-    def get_lane(self, lane_name):
+    def get_lane_by_name(self, lane_name):
         lane_number = lane_name.replace("lanelet", "")
         lane_number = int(lane_number)
         if lane_number > len(self.map_data):
@@ -98,38 +98,50 @@ class Planning(Node):
                     visited.add(next_lanelet)
                     queue.append((next_lanelet, path + [next_lanelet]))
 
-        return None, float('inf')  # If no path found
+        return None, float('inf')  # If no path was found
 
     def path_planning(self):
-        start_lanelet = "lanelet1"
-        dest_lanelet = "lanelet109"
+        start_lanelet = "lanelet215"
+        dest_lanelet = "lanelet103"
         self.path, self.num_transitions = self.bfs(start_lanelet, dest_lanelet)
         self.isPathPlanned = True
     
     def get_next_point(self):
-        pass
-
+        location = self.get_location()
+        closest_point = location.closest_point # geometry msg Point
+        current_lane = self.get_lane_by_name(location.closest_lane_names.data)
+        # algorithm to determine if a certain point was passed, Doing so, we figure out that point was met and we should find a new point
+        # By distance? radious?
+        
+        # reporting the next point
+        
     def get_next_lane(self):
         location = self.get_location()
-        current_lane = location.closest_lane_names
+        current_lane = location.closest_lane_names.data
+        self.get_logger().info(f"current lane: {current_lane}")
+        self.get_logger().info(f"path: {self.path}")
         if current_lane in self.path:
             index = self.path.index(current_lane)
-            if current_lane is not self.path[-1]:
-                return self.path[index + 1] # returns the next lane
-            else:
+            if current_lane is self.path[-1]:
+                self.get_logger().info(f"final lane")
                 return current_lane # current lane is the destination lane
+            else:
+                return self.path[index + 1] # returns the next lane
         else:
             return -1 # current lane is not in the path
 
     
     def planning(self):
         if self.isPathPlanned:
-            pass
+            next_lane = self.get_next_lane()
+            self.get_logger().info(f"next lane: {next_lane}")
         else:
             self.path_planning()
             if self.path and self.num_transitions:
                 print(self.path)
                 print(self.num_transitions)
+        
+        # publishes: next_point
 
 def main(args=None):
     rclpy.init(args=args)

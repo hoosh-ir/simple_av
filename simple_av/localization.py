@@ -11,6 +11,7 @@ from sensor_msgs.msg import Imu
 from simple_av_msgs.msg import LocalizationMsg
 
 
+
 class Point:
     def __init__(self, x=0.0, y=0.0, z=0.0):
         self.x = x
@@ -43,6 +44,13 @@ class Localization(Node):
         )
 
         self.subscriptionPose = self.create_subscription(
+            PoseStamped,
+            '/awsim/ground_truth/vehicle/pose',
+            self.groundTruth_callback,
+            10
+        )
+
+        self.subscriptionPose = self.create_subscription(
             Imu,
             '/sensing/imu/tamagawa/imu_raw',
             self.imu_callback,
@@ -53,6 +61,7 @@ class Localization(Node):
         self.localization_publisher = self.create_publisher(LocalizationMsg, 'localization/location', 10)
 
         self.pose_msg = PoseStamped()
+        self.ground_truth_msg = PoseStamped()
         self.imu_msg = Imu()
         self.isGlobalPositioningDone = False
         self.local_positioning_depth_search = 2
@@ -71,6 +80,12 @@ class Localization(Node):
             map_data = json.load(json_file)
             return map_data
 
+    def groundTruth_callback(self, msg):
+        self.ground_truth_msg = msg
+    
+    def get_groundTruth_msg(self):
+        return self.ground_truth_msg
+
     def pose_callback(self, msg):
         self.pose_msg = msg
     
@@ -82,27 +97,6 @@ class Localization(Node):
     
     def get_imu_msg(self):
         return self.imu_msg
-    
-    def display_imu(self):
-        imu_msg = self.get_imu_msg()
-        if imu_msg:
-            self.get_logger().info(
-                f"Orientation\n"
-                f"{imu_msg.orientation}\n"
-                f"Orientation Covariance\n"
-                f"{imu_msg.orientation_covariance}\n"
-                f"----------------------------------\n"
-                f"angular velocity\n"
-                f"{imu_msg.angular_velocity}\n"
-                f"angular velocity covariance\n"
-                f"{imu_msg.angular_velocity_covariance}\n"
-                f"----------------------------------\n"
-                f"linear acceleration\n"
-                f"{imu_msg.linear_acceleration}\n"
-                f"linear acceleration Covariance\n"
-                f"{imu_msg.linear_acceleration_covariance}\n"
-                f"----------------------------------\n"
-                )
     
     def display_map(self, displayTrafficLight = False):
         for lanelet in self.map_data:
@@ -323,12 +317,15 @@ class Localization(Node):
         - If already globally positioned, calls local_positioning using previous closest point and lane names.
         - Continues to update self.closest_point, self.closest_lane_name, and self.min_distance accordingly.
         """
+        # pose = PoseStamped()
+        # pose = self.get_groundTruth_msg()
+        # print(pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z)
         self.display_imu()
         if not self.isGlobalPositioningDone:
-            self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
+            # self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.closest_point, self.closest_lane_name, self.min_distance = self.global_positioning()
         else:
-            self.get_logger().info("Local positioning")
+            # self.get_logger().info("Local positioning")
             self.closest_point, self.closest_lane_name, self.min_distance = self.local_positioning(self.closest_point, self.closest_lane_name, self.min_distance)
             self.publish_vehicle_location(self.closest_point, self.closest_lane_name, self.min_distance)
 
