@@ -6,7 +6,7 @@ from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
 import math
 from collections import deque
-from custom_interface.msg import LocationMsg
+from simple_av_msgs.msg import LocalizationMsg
 
 
 class Planning(Node):
@@ -26,10 +26,10 @@ class Planning(Node):
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
 
         # Create subscriber to /localization/location topic
-        self.subscriptionLocation = self.create_subscription(LocationMsg, 'localization/location', self.location_callback, 10)
+        self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'localization/location', self.location_callback, 10)
 
         self.pose = PoseStamped()
-        self.location = LocationMsg()
+        self.location = LocalizationMsg()
 
         self.isPathPlanned = False
         self.path = None
@@ -56,14 +56,12 @@ class Planning(Node):
     def get_location(self):
         return self.location
     
-    def display_vehicle_position(self, msg_pose, closest_point, closest_lane_names, min_distance):
-        closest_point = Point(x=closest_point.x, y=closest_point.y, z=closest_point.z)
+    def display_vehicle_position(self, msg_pose, closest_point, closest_lane_name, min_distance):
         self.get_logger().info(
                 f'Received Pose :\n'
                 f'Position - x: {msg_pose.pose.position.x}, y = {msg_pose.pose.position.y}, z = {msg_pose.pose.position.z}\n'
-                f'Closest point: {closest_point}\n'
-                f'Closest Lanes:\n' +
-                ''.join(f"{lane}, \n" for lane in closest_lane_names) +
+                f'Closest point: {closest_point.get_point()}\n'
+                f'Closest Lane: {closest_lane_name}\n'
                 f'Minimum distance - {min_distance}\n'
             )
     
@@ -107,6 +105,22 @@ class Planning(Node):
         dest_lanelet = "lanelet109"
         self.path, self.num_transitions = self.bfs(start_lanelet, dest_lanelet)
         self.isPathPlanned = True
+    
+    def get_next_point(self):
+        pass
+
+    def get_next_lane(self):
+        location = self.get_location()
+        current_lane = location.closest_lane_names
+        if current_lane in self.path:
+            index = self.path.index(current_lane)
+            if current_lane is not self.path[-1]:
+                return self.path[index + 1] # returns the next lane
+            else:
+                return current_lane # current lane is the destination lane
+        else:
+            return -1 # current lane is not in the path
+
     
     def planning(self):
         if self.isPathPlanned:
