@@ -122,9 +122,14 @@ class Localization(Node):
                 f"Stop Line Pose P2: {lanelet['stopLinePoseP2']}\n"
             )
 
-    def display_vehicle_position(self, msg_pose, closest_point, closest_lane_name, min_distance):
+    def display_vehicle_position(self, ground_truth, msg_pose, closest_point, closest_lane_name, min_distance):
+        ground_truth.pose.position.x
         self.get_logger().info(
+                f'Received orientation :\n'
+                f'yaw: {ground_truth.pose.orientation.z}\n'
+                f'roll, pitch: {ground_truth.pose.orientation.x, ground_truth.pose.orientation.y}\n'
                 f'Received Pose :\n'
+                f'grount t - x: {ground_truth.pose.position.x}, y = {ground_truth.pose.position.y}, z = {ground_truth.pose.position.z}\n'
                 f'Position - x: {msg_pose.pose.position.x}, y = {msg_pose.pose.position.y}, z = {msg_pose.pose.position.z}\n'
                 f'Closest point: {closest_point.get_point()}\n'
                 f'Closest Lane: {closest_lane_name}\n'
@@ -262,11 +267,12 @@ class Localization(Node):
         - Returns the closest point(s), corresponding lane names, and minimum distance found.
         """
         pose_msg = self.get_pose_msg()
+        ground_truth = self.get_groundTruth_msg()
         if pose_msg and pose_msg.pose.position.x != 0 and pose_msg.pose.position.y != 0 and pose_msg.pose.position.z != 0:
             # print(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             closest_point, closest_lane_name, min_distance = self.get_closest_point_and_lane(current_position)
-            # self.display_vehicle_position(pose_msg, closest_point, closest_lane_name, min_distance)
+            self.display_vehicle_position(ground_truth, pose_msg, closest_point, closest_lane_name, min_distance)
             self.isGlobalPositioningDone = True
             return closest_point, closest_lane_name, min_distance
         return None, [], float('inf')
@@ -297,10 +303,12 @@ class Localization(Node):
             return closest_point, closest_lane_name, min_distance
         local_search_area = self.build_search_area(closest_lane_name)
         pose_msg = self.get_pose_msg()
+        pose_msg = self.get_pose_msg()
+        ground_truth = self.get_groundTruth_msg()
         if pose_msg:
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
             closest_point, closest_lane_name, min_distance = self.get_closest_point_and_lane(current_position, local_search_area)
-            # self.display_vehicle_position(pose_msg, closest_point, closest_lane_name, min_distance)
+            self.display_vehicle_position(ground_truth, pose_msg, closest_point, closest_lane_name, min_distance)
             return closest_point, closest_lane_name, min_distance
         else:
             return closest_point, closest_lane_name, min_distance
@@ -317,10 +325,6 @@ class Localization(Node):
         - If already globally positioned, calls local_positioning using previous closest point and lane names.
         - Continues to update self.closest_point, self.closest_lane_name, and self.min_distance accordingly.
         """
-        # pose = PoseStamped()
-        # pose = self.get_groundTruth_msg()
-        # print(pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z)
-        self.display_imu()
         if not self.isGlobalPositioningDone:
             # self.get_logger().info(f"global positioning, {self.isGlobalPositioningDone}")
             self.closest_point, self.closest_lane_name, self.min_distance = self.global_positioning()
