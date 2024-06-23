@@ -78,8 +78,8 @@ class Data_box(Node):
     
     def get_lateral_command(self):
         lateral_command = AckermannLateralCommand()
-        lateral_command.steering_tire_angle = 5.0  # example value
-        lateral_command.steering_tire_rotation_rate = 0.5  # example value
+        lateral_command.steering_tire_angle = 10.0  # example value
+        lateral_command.steering_tire_rotation_rate = 1.0  # example value
         return lateral_command
 
     def get_longitudinal_command(self):
