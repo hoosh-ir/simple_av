@@ -7,6 +7,7 @@ from geometry_msgs.msg import PoseStamped, Point
 import math
 from collections import deque
 from simple_av_msgs.msg import LocalizationMsg
+import numpy as np
 
 
 class Planning(Node):
@@ -55,6 +56,19 @@ class Planning(Node):
 
     def get_location(self):
         return self.location
+
+    def distance(point1, point2):
+        return np.sqrt((point1['x'] - point2['x'])**2 + 
+                    (point1['y'] - point2['y'])**2 + 
+                    (point1['z'] - point2['z'])**2)
+
+    def vector_from_points(point1, point2):
+        return np.array([point2['x'] - point1['x'], 
+                        point2['y'] - point1['y'], 
+                        point2['z'] - point1['z']])
+
+    def dot_product(vector1, vector2):
+        return np.dot(vector1, vector2)
     
     def display_vehicle_position(self, msg_pose, closest_point, closest_lane_name, min_distance):
         self.get_logger().info(
@@ -106,15 +120,6 @@ class Planning(Node):
         self.path, self.num_transitions = self.bfs(start_lanelet, dest_lanelet)
         self.isPathPlanned = True
     
-    def get_next_point(self):
-        location = self.get_location()
-        closest_point = location.closest_point # geometry msg Point
-        current_lane = self.get_lane_by_name(location.closest_lane_names.data)
-        # algorithm to determine if a certain point was passed, Doing so, we figure out that point was met and we should find a new point
-        # By distance? radious?
-        
-        # reporting the next point
-        
     def get_next_lane(self):
         location = self.get_location()
         current_lane = location.closest_lane_names.data
@@ -129,6 +134,29 @@ class Planning(Node):
                 return self.path[index + 1] # returns the next lane
         else:
             return -1 # current lane is not in the path
+        
+
+    def get_next_point(self, threshold=2.0):
+        location = self.get_location()
+        if not location:
+            return None
+    
+        current_closest_point = location.closest_point # geometry msg Point
+        dist = location.minimal_distance
+        current_lane = self.get_lane_by_name(location.closest_lane_names.data)
+        waypoints = current_lane['waypoints']
+
+         # Calculate direction vectors
+        direction_to_current_waypoint = self.vector_from_points(previous_waypoint, current_waypoint)
+        direction_to_robot = self.vector_from_points(previous_waypoint, robot_position)
+
+
+
+        
+        # algorithm to determine if a certain point was passed, Doing so, we figure out that point was met and we should find a new point
+        # By distance? radious?
+        
+        # reporting the next point
 
     
     def planning(self):
