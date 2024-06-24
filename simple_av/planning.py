@@ -27,13 +27,14 @@ class Planning(Node):
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
 
         # Create subscriber to /localization/location topic
-        self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'localization/location', self.location_callback, 10)
+        self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
 
         self.pose = PoseStamped()
         self.location = LocalizationMsg()
 
         self.isPathPlanned = False
-        self.path = None
+        self.path_as_lanes = None # list of lanes from start point to distination
+        self.path = None # list of points in order of path_as_lanes
         self.num_lane_transitions = None
     
     def load_map(self):
@@ -87,15 +88,27 @@ class Planning(Node):
             return None
         return self.map_data[lane_number - 1]
     
-    def subscription_test(self):
+    def input_test(self):
         pose_msg = self.get_pose()
         location = self.get_location()
         closest_point, closest_lane_names, min_distance = location.closest_point, location.closest_lane_names, location.minimal_distance
         self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
+
+    def create_path_of_points(self):
+        points = []
+        for lane_name in self.path_as_lanes:
+            lane_obj = self.get_lane_by_name(lane_name)
+            waypoints = lane_obj['waypoints']
+            for waypoint in waypoints:
+                points.append(waypoint)
+
+        # Remove duplicate points
+        points = [points[i] for i in range(len(points)) if i == 0 or (points[i]['x'] != points[i - 1]['x'] or points[i]['y'] != points[i - 1]['y'] or points[i]['z'] != points[i - 1]['z'])]
+        self.path = points
     
     def bfs(self, start_lanelet, dest_lanelet):
         if start_lanelet not in self.graph or dest_lanelet not in self.graph:
-            return None, float('inf')
+            return
 
         queue = deque([(start_lanelet, [start_lanelet])])
         visited = set()
@@ -105,36 +118,28 @@ class Planning(Node):
             current_lanelet, path = queue.popleft()
 
             if current_lanelet == dest_lanelet:
-                return path, len(path) - 1  # Return path and number of lanelet transitions (length - 1)
+                self.path_as_lanes = path
+                self.create_path_of_points()
 
             for next_lanelet in self.graph[current_lanelet]['nextLanes']:
                 if next_lanelet not in visited:
                     visited.add(next_lanelet)
                     queue.append((next_lanelet, path + [next_lanelet]))
-
-        return None, float('inf')  # If no path was found
-
-    def path_planning(self):
-        start_lanelet = "lanelet215"
-        dest_lanelet = "lanelet103"
-        self.path, self.num_transitions = self.bfs(start_lanelet, dest_lanelet)
-        self.isPathPlanned = True
-    
+        
     def get_next_lane(self):
         location = self.get_location()
         current_lane = location.closest_lane_names.data
         self.get_logger().info(f"current lane: {current_lane}")
-        self.get_logger().info(f"path: {self.path}")
-        if current_lane in self.path:
-            index = self.path.index(current_lane)
-            if current_lane is self.path[-1]:
+        self.get_logger().info(f"path: {self.path_as_lanes}")
+        if current_lane in self.path_as_lanes:
+            index = self.path_as_lanes.index(current_lane)
+            if current_lane is self.path_as_lanes[-1]:
                 self.get_logger().info(f"final lane")
                 return current_lane # current lane is the destination lane
             else:
-                return self.path[index + 1] # returns the next lane
+                return self.path_as_lanes[index + 1] # returns the next lane
         else:
             return -1 # current lane is not in the path
-        
 
     def get_next_point(self, threshold=2.0):
         location = self.get_location()
@@ -148,26 +153,29 @@ class Planning(Node):
 
          # Calculate direction vectors
         direction_to_current_waypoint = self.vector_from_points(previous_waypoint, current_waypoint)
-        direction_to_robot = self.vector_from_points(previous_waypoint, robot_position)
-
-
-
-        
+        direction_to_robot = self.vector_from_points(previous_waypoint, robot_position)   
         # algorithm to determine if a certain point was passed, Doing so, we figure out that point was met and we should find a new point
         # By distance? radious?
         
         # reporting the next point
+    
+    def local_planning(self):
+        print(self.path_as_lanes)
+        print(len(self.path))
+        print(self.path)
 
     
     def planning(self):
         if self.isPathPlanned:
-            next_lane = self.get_next_lane()
-            self.get_logger().info(f"next lane: {next_lane}")
-        else:
-            self.path_planning()
-            if self.path and self.num_transitions:
-                print(self.path)
-                print(self.num_transitions)
+            self.local_planning()
+        else: # Global path planning
+            # start_lanelet = "lanelet215"
+            # dest_lanelet = "lanelet103"
+            start_lanelet = "lanelet1"
+            dest_lanelet = "lanelet252"
+            self.bfs(start_lanelet, dest_lanelet) # Creates the path
+            self.isPathPlanned = True
+            print(self.path_as_lanes)
         
         # publishes: next_point
 

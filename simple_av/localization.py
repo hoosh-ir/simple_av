@@ -58,7 +58,7 @@ class Localization(Node):
         )
 
         # Initialize the publisher
-        self.localization_publisher = self.create_publisher(LocalizationMsg, 'localization/location', 10)
+        self.localization_publisher = self.create_publisher(LocalizationMsg, 'simple_av/localization/location', 10)
 
         self.pose_msg = PoseStamped()
         self.ground_truth_msg = PoseStamped()
