@@ -169,10 +169,8 @@ class Planning(Node):
         if self.isPathPlanned:
             self.local_planning()
         else: # Global path planning
-            # start_lanelet = "lanelet215"
-            # dest_lanelet = "lanelet103"
-            start_lanelet = "lanelet1"
-            dest_lanelet = "lanelet252"
+            start_lanelet = "lanelet215"
+            dest_lanelet = "lanelet103"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
             self.isPathPlanned = True
             print(self.path_as_lanes)
