@@ -142,51 +142,46 @@ class Planning(Node):
             return -1 # current lane is not in the path
         
 
-    def get_next_point(self, threshold=5.0): # If the distance from robot current pose to next point is less than threshold shift the next point
+    def get_next_point(self, vehicle_pose, current_closest_point_index, threshold=5.0): 
+        if current_closest_point_index == len(self.path) - 1:
+            return current_closest_point_index, self.path[current_closest_point_index], "End of waypoints"
+            
+        # direction vector from the closest point to the next waypoint.
+        direction_vector = self.vector_from_points(self.path[current_closest_point_index], self.path[current_closest_point_index + 1])
+        # direction vector from the previous waypoint to the robot's current position.
+        direction_vector_of_robot = self.vector_from_points(self.path[current_closest_point_index], vehicle_pose)   
+
+        # Check if the robot has passed the waypoint. If the dot product is positive, the robot is ahead of or at the waypoint. If it's negative, the robot is behind the waypoint.
+        if self.dot_product(direction_vector, direction_vector_of_robot) >= 0:
+            current_closest_point_index = current_closest_point_index + 1
+        else:
+            if self.distance(vehicle_pose, self.path[current_closest_point_index]) < threshold:
+                current_closest_point_index = current_closest_point_index + 1
+            else:
+                current_closest_point_index = current_closest_point_index
+        
+        if current_closest_point_index >= len(self.path):
+            return current_closest_point_index, None, "End of waypoints"
+            
+        return current_closest_point_index, self.path[current_closest_point_index], "continue"
+
+    
+    def local_planning(self):
         location = self.get_location()
         vehicle_pose = self.get_pose()
         if not location and not vehicle_pose:
             print("error - no location or pose input")
             return None
-
+        vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
         current_closest_point_to_vehicle = {'x': location.closest_point.x, 'y': location.closest_point.y, 'z': location.closest_point.z}
         # Finding the index of the closest point in path list
-        current_closest_point_index = next(i for i, point in enumerate(self.path) if point == current_closest_point_to_vehicle)
-        print("closest point to vehicle: ", current_closest_point_to_vehicle, " index: ", current_closest_point_index)
-        if current_closest_point_index == len(self.path) - 1: # end of path list
-            print("error - end of line")
-            pass
-    
-        # direction vector from the closest point to the next waypoint.
-        direction_vector = self.vector_from_points(self.path[current_closest_point_index], self.path[current_closest_point_index + 1])
-
-        # direction vector from the previous waypoint to the robot's current position.
-        vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
-        direction_vector_of_robot = self.vector_from_points(self.path[current_closest_point_index], vehicle_pose)   
-
-        # Check if the robot has passed the waypoint
-        if self.dot_product(direction_vector, direction_vector_of_robot) >= 0:
-            # Check if the robot is within the threshold distance to consider the waypoint as reached
-            print("AHEAD ")
-            goto_point_index = current_closest_point_index + 1
-            print("next point: ", goto_point_index, self.path[goto_point_index])
-        else:
-            print("BEHIND ")
-            if self.distance(vehicle_pose, self.path[current_closest_point_index]) < threshold:
-                goto_point_index = current_closest_point_index + 1
-                print("threshold reached - next point: ", goto_point_index, self.path[goto_point_index])
-            else:
-                goto_point_index = current_closest_point_index
-                print("next point: ", goto_point_index, self.path[goto_point_index])
-
-
-    
-    def local_planning(self):
-        # print(self.path_as_lanes)
-        # print(len(self.path))
-        # for p in self.path:
-        #     print(p)
-        self.get_next_point()
+        try:
+            current_closest_point_index = next(i for i, point in enumerate(self.path) if point == current_closest_point_to_vehicle)
+        except StopIteration:
+            print("The closest point to the vehicle is not in the list.")
+        
+        next_point_index, next_point, status = self.get_next_point(vehicle_pose, current_closest_point_index)
+        print(next_point_index, next_point, status)
     
 
     def global_path_planning(self):
