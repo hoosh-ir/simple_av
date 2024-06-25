@@ -162,20 +162,30 @@ class Planning(Node):
     def local_planning(self):
         print(self.path_as_lanes)
         print(len(self.path))
-        print(self.path)
+        for p in self.path:
+            print(p)
+    
+
+    def global_path_planning(self):
+        location = self.get_location()
+        if location:
+            print("debug 0 - path planning ... ")
+            start_lanelet = location.closest_lane_names.data
+            dest_lanelet = "lanelet103"
+            self.bfs(start_lanelet, dest_lanelet) # Creates the path
+            if self.path and self.path_as_lanes:
+                self.isPathPlanned = True
+                print("debug 1 - path of lanes: ", self.path_as_lanes)
 
     
     def planning(self):
-        if self.isPathPlanned:
+        if not self.isPathPlanned: # path planning has not yet done.
+            self.global_path_planning()
+        else:  # path planning has been done and the path list is created.
+            print("debug 2 - local planning ")
             self.local_planning()
-        else: # Global path planning
-            start_lanelet = "lanelet215"
-            dest_lanelet = "lanelet103"
-            self.bfs(start_lanelet, dest_lanelet) # Creates the path
-            self.isPathPlanned = True
-            print(self.path_as_lanes)
-        
         # publishes: next_point
+
 
 def main(args=None):
     rclpy.init(args=args)
