@@ -14,7 +14,7 @@ class Planning(Node):
     def __init__(self):
         super().__init__('Planning')
         # Load the Json map
-        self.map_data = self.load_map()
+        self.map_data = self.load_map_data()
         self.map_data = self.map_data["LaneLetsArray"]
 
         self.graph = {lanelet['name']: {
@@ -29,16 +29,20 @@ class Planning(Node):
         # Create subscriber to /localization/location topic
         self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
 
-        self.pose = PoseStamped()
-        self.location = LocalizationMsg()
+        self.pose = PoseStamped()  # Initialize pose
+        self.location = LocalizationMsg()  # Initialize location
 
-        self.isPathPlanned = False
-        self.path_as_lanes = None # list of lanes from start point to distination
-        self.path = None # list of points in order of path_as_lanes
+        self.isPathPlanned = False  # Flag to check if the path has been planned
+        self.path_as_lanes = None  # List of lanes from start point to destination
+        self.path = None  # List of points in order of path_as_lanes
         
     
-    def load_map(self):
-        # Get the path to the resource directory
+    def load_map_data(self):
+        """
+        Load the map data from a JSON file.
+        Returns:
+            dict: The map data loaded from the JSON file.
+        """
         package_share_directory = get_package_share_directory('simple_av')
         json_file_path = os.path.join(package_share_directory, 'resource', 'map.json')
         # Load and read the JSON file
@@ -47,28 +51,70 @@ class Planning(Node):
             return map_data
 
     def pose_callback(self, msg):
+        """
+        Callback function to update the pose data.
+        Args:
+            msg (PoseStamped): The pose message received from the topic.
+        """
         self.pose = msg
 
     def location_callback(self, msg):
+        """
+        Callback function to update the location data.
+        Args:
+            msg (LocalizationMsg): The localization message received from the topic.
+        """
         self.location = msg
 
-    def get_pose(self):
+    def current_pose(self):
+        """
+        Returns:
+            PoseStamped: The current pose of the vehicle.
+        """
         return self.pose
 
-    def get_location(self):
+    def current_location(self):
+        """
+        Returns:
+            LocalizationMsg: The current location of the vehicle.
+        """
         return self.location
 
-    def distance(aelf, point1, point2):
+    def calculate_distance(aelf, point1, point2):
+        """
+        Calculate the Euclidean distance between two points.
+        Args:
+            point1 (dict): The first point with 'x', 'y', 'z' coordinates.
+            point2 (dict): The second point with 'x', 'y', 'z' coordinates.
+        Returns:
+            float: The Euclidean distance between the two points.
+        """
         return np.sqrt((point1['x'] - point2['x'])**2 + 
                     (point1['y'] - point2['y'])**2 + 
                     (point1['z'] - point2['z'])**2)
 
-    def vector_from_points(self, point1, point2):
+    def calculate_vector(self, point1, point2):
+        """
+        Calculate the vector from point1 to point2.
+        Args:
+            point1 (dict): The starting point with 'x', 'y', 'z' coordinates.
+            point2 (dict): The ending point with 'x', 'y', 'z' coordinates.
+        Returns:
+            np.array: The vector from point1 to point2.
+        """
         return np.array([point2['x'] - point1['x'], 
                         point2['y'] - point1['y'], 
                         point2['z'] - point1['z']])
 
-    def dot_product(self, vector1, vector2):
+    def calculate_dot_product(self, vector1, vector2):
+        """
+        Calculate the dot product of two vectors.
+        Args:
+            vector1 (np.array): The first vector.
+            vector2 (np.array): The second vector.
+        Returns:
+            float: The dot product of the two vectors.
+        """
         return np.dot(vector1, vector2)
     
     def display_vehicle_position(self, msg_pose, closest_point, closest_lane_name, min_distance):
@@ -80,24 +126,27 @@ class Planning(Node):
                 f'Minimum distance - {min_distance}\n'
             )
     
-    # Method to get the desiered lane by name, returns the founded Lanelet
-    def get_lane_by_name(self, lane_name):
+    def find_lane_by_name(self, lane_name):
+        """
+        Get the lane object by its name.
+        Args:
+            lane_name (str): The name of the lane.
+        Returns:
+            dict: The lane object if found, else None.
+        """
         lane_number = lane_name.replace("lanelet", "")
         lane_number = int(lane_number)
         if lane_number > len(self.map_data):
             return None
         return self.map_data[lane_number - 1]
-    
-    def input_test(self):
-        pose_msg = self.get_pose()
-        location = self.get_location()
-        closest_point, closest_lane_names, min_distance = location.closest_point, location.closest_lane_names, location.minimal_distance
-        self.display_vehicle_position(pose_msg, closest_point, closest_lane_names, min_distance)
 
-    def create_path_of_points(self):
+    def generate_path_points(self):
+        """
+        Create a path of points based on the path of lanes.
+        """
         points = []
         for lane_name in self.path_as_lanes:
-            lane_obj = self.get_lane_by_name(lane_name)
+            lane_obj = self.find_lane_by_name(lane_name)
             waypoints = lane_obj['waypoints']
             for waypoint in waypoints:
                 points.append(waypoint)
@@ -106,7 +155,14 @@ class Planning(Node):
         points = [points[i] for i in range(len(points)) if i == 0 or (points[i]['x'] != points[i - 1]['x'] or points[i]['y'] != points[i - 1]['y'] or points[i]['z'] != points[i - 1]['z'])]
         self.path = points
     
+
     def bfs(self, start_lanelet, dest_lanelet):
+        """
+        Perform Breadth-First Search (BFS) to find a path from start_lanelet to dest_lanelet.
+        Args:
+            start_lanelet (str): The name of the starting lanelet.
+            dest_lanelet (str): The name of the destination lanelet.
+        """
         if start_lanelet not in self.graph or dest_lanelet not in self.graph:
             return
 
@@ -119,43 +175,36 @@ class Planning(Node):
 
             if current_lanelet == dest_lanelet:
                 self.path_as_lanes = path
-                self.create_path_of_points()
+                self.generate_path_points()
 
             for next_lanelet in self.graph[current_lanelet]['nextLanes']:
                 if next_lanelet not in visited:
                     visited.add(next_lanelet)
                     queue.append((next_lanelet, path + [next_lanelet]))
         
-    def get_next_lane(self):
-        location = self.get_location()
-        current_lane = location.closest_lane_names.data
-        self.get_logger().info(f"current lane: {current_lane}")
-        self.get_logger().info(f"path: {self.path_as_lanes}")
-        if current_lane in self.path_as_lanes:
-            index = self.path_as_lanes.index(current_lane)
-            if current_lane is self.path_as_lanes[-1]:
-                self.get_logger().info(f"final lane")
-                return current_lane # current lane is the destination lane
-            else:
-                return self.path_as_lanes[index + 1] # returns the next lane
-        else:
-            return -1 # current lane is not in the path
-        
 
     def get_next_point(self, vehicle_pose, current_closest_point_index, threshold=5.0): 
+        """
+        Get the next point for the vehicle to move towards.
+        Args:
+            vehicle_pose (dict): The current pose of the vehicle.
+            current_closest_point_index (int): The index of the current closest point in the path.
+            threshold (float): The distance threshold to consider the point as reached.
+        Returns:
+            tuple: The updated closest point index, the next point, and the status.
+        """
         if current_closest_point_index == len(self.path) - 1:
             return current_closest_point_index, self.path[current_closest_point_index], "End of waypoints"
             
-        # direction vector from the closest point to the next waypoint.
-        direction_vector = self.vector_from_points(self.path[current_closest_point_index], self.path[current_closest_point_index + 1])
-        # direction vector from the previous waypoint to the robot's current position.
-        direction_vector_of_robot = self.vector_from_points(self.path[current_closest_point_index], vehicle_pose)   
+        # Calculate direction vectors
+        direction_vector = self.calculate_vector(self.path[current_closest_point_index], self.path[current_closest_point_index + 1])
+        direction_vector_of_robot = self.calculate_vector(self.path[current_closest_point_index], vehicle_pose)   
 
-        # Check if the robot has passed the waypoint. If the dot product is positive, the robot is ahead of or at the waypoint. If it's negative, the robot is behind the waypoint.
-        if self.dot_product(direction_vector, direction_vector_of_robot) >= 0:
+        # Check if the robot has passed the waypoint.
+        if self.calculate_dot_product(direction_vector, direction_vector_of_robot) >= 0: # Has passed, AHEAD
             current_closest_point_index = current_closest_point_index + 1
-        else:
-            if self.distance(vehicle_pose, self.path[current_closest_point_index]) < threshold:
+        else: # Behind
+            if self.calculate_distance(vehicle_pose, self.path[current_closest_point_index]) < threshold:
                 current_closest_point_index = current_closest_point_index + 1
             else:
                 current_closest_point_index = current_closest_point_index
@@ -167,8 +216,11 @@ class Planning(Node):
 
     
     def local_planning(self):
-        location = self.get_location()
-        vehicle_pose = self.get_pose()
+        """
+        Perform local path planning to determine the next point for the vehicle.
+        """
+        location = self.current_location()
+        vehicle_pose = self.current_pose()
         if not location and not vehicle_pose:
             print("error - no location or pose input")
             return None
@@ -182,10 +234,14 @@ class Planning(Node):
         
         next_point_index, next_point, status = self.get_next_point(vehicle_pose, current_closest_point_index)
         print(next_point_index, next_point, status)
+        # publishing the next point
     
 
     def global_path_planning(self):
-        location = self.get_location()
+        """
+        Perform global path planning to create a path from the current location to the destination.
+        """
+        location = self.current_location()
         if location:
             print("path planning ... ")
             start_lanelet = location.closest_lane_names.data
@@ -197,6 +253,9 @@ class Planning(Node):
 
     
     def planning(self):
+        """
+        Main planning function to decide between global and local planning.
+        """
         if not self.isPathPlanned: # path planning has not yet done.
             self.global_path_planning()
         else:  # path planning has been done and the path list is created.
