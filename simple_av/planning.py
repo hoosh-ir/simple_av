@@ -35,7 +35,7 @@ class Planning(Node):
         self.isPathPlanned = False
         self.path_as_lanes = None # list of lanes from start point to distination
         self.path = None # list of points in order of path_as_lanes
-        self.num_lane_transitions = None
+        
     
     def load_map(self):
         # Get the path to the resource directory
@@ -58,17 +58,17 @@ class Planning(Node):
     def get_location(self):
         return self.location
 
-    def distance(point1, point2):
+    def distance(aelf, point1, point2):
         return np.sqrt((point1['x'] - point2['x'])**2 + 
                     (point1['y'] - point2['y'])**2 + 
                     (point1['z'] - point2['z'])**2)
 
-    def vector_from_points(point1, point2):
+    def vector_from_points(self, point1, point2):
         return np.array([point2['x'] - point1['x'], 
                         point2['y'] - point1['y'], 
                         point2['z'] - point1['z']])
 
-    def dot_product(vector1, vector2):
+    def dot_product(self, vector1, vector2):
         return np.dot(vector1, vector2)
     
     def display_vehicle_position(self, msg_pose, closest_point, closest_lane_name, min_distance):
@@ -140,49 +140,68 @@ class Planning(Node):
                 return self.path_as_lanes[index + 1] # returns the next lane
         else:
             return -1 # current lane is not in the path
-
-    def get_next_point(self, threshold=2.0):
-        location = self.get_location()
-        if not location:
-            return None
-    
-        current_closest_point = location.closest_point # geometry msg Point
-        dist = location.minimal_distance
-        current_lane = self.get_lane_by_name(location.closest_lane_names.data)
-        waypoints = current_lane['waypoints']
-
-         # Calculate direction vectors
-        direction_to_current_waypoint = self.vector_from_points(previous_waypoint, current_waypoint)
-        direction_to_robot = self.vector_from_points(previous_waypoint, robot_position)   
-        # algorithm to determine if a certain point was passed, Doing so, we figure out that point was met and we should find a new point
-        # By distance? radious?
         
-        # reporting the next point
+
+    def get_next_point(self, threshold=2.0): # If the distance from robot current pose to next point is less than threshold shift the next point
+        location = self.get_location()
+        vehicle_pose = self.get_pose()
+        if not location and not vehicle_pose:
+            print("error - no location or pose input")
+            return None
+
+        current_closest_point_to_vehicle = {'x': location.closest_point.x, 'y': location.closest_point.y, 'z': location.closest_point.z}
+        # Finding the index of the closest point in path list
+        next_point_to_reach = next(i for i, point in enumerate(self.path) if point == current_closest_point_to_vehicle)
+        print("debug 0 - closest point to vehicle: ", current_closest_point_to_vehicle, " index: ", next_point_to_reach)
+        if next_point_to_reach == len(self.path) - 1: # end of path list
+            print("error - end of line")
+            pass
+    
+        # direction vector from the closest point to the next waypoint.
+        direction_vector = self.vector_from_points(self.path[next_point_to_reach], self.path[next_point_to_reach + 1])
+
+        # direction vector from the previous waypoint to the robot's current position.
+        vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
+        direction_vector_of_robot = self.vector_from_points(self.path[next_point_to_reach], vehicle_pose)   
+
+        dot = self.dot_product(direction_vector, direction_vector_of_robot)
+        
+        # Check if the robot has passed the waypoint
+        if dot >= 0:
+            # Check if the robot is within the threshold distance to consider the waypoint as reached
+            print("debug 1 - dot product: ", dot, " AHEAD ")
+            goto_point_index = next_point_to_reach + 1
+        else:
+            print("debug 1 - dot product: ", dot, " BEHIND ")
+            goto_point_index = next_point_to_reach
+        print("debug 2 - next point: ", goto_point_index, self.path[goto_point_index])
+
     
     def local_planning(self):
-        print(self.path_as_lanes)
-        print(len(self.path))
-        for p in self.path:
-            print(p)
+        # print(self.path_as_lanes)
+        # print(len(self.path))
+        # for p in self.path:
+        #     print(p)
+        self.get_next_point()
     
 
     def global_path_planning(self):
         location = self.get_location()
         if location:
-            print("debug 0 - path planning ... ")
+            print("path planning ... ")
             start_lanelet = location.closest_lane_names.data
             dest_lanelet = "lanelet103"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
-                print("debug 1 - path of lanes: ", self.path_as_lanes)
+                print("path of lanes: ", self.path_as_lanes)
 
     
     def planning(self):
         if not self.isPathPlanned: # path planning has not yet done.
             self.global_path_planning()
         else:  # path planning has been done and the path list is created.
-            print("debug 2 - local planning ")
+            print("local planning ...")
             self.local_planning()
         # publishes: next_point
 

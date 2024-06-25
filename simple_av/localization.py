@@ -125,11 +125,11 @@ class Localization(Node):
     def display_vehicle_position(self, ground_truth, msg_pose, closest_point, closest_lane_name, min_distance):
         ground_truth.pose.position.x
         self.get_logger().info(
-                f'Received orientation :\n'
-                f'yaw: {ground_truth.pose.orientation.z}\n'
-                f'roll, pitch: {ground_truth.pose.orientation.x, ground_truth.pose.orientation.y}\n'
-                f'Received Pose :\n'
-                f'grount t - x: {ground_truth.pose.position.x}, y = {ground_truth.pose.position.y}, z = {ground_truth.pose.position.z}\n'
+                # f'Received orientation :\n'
+                # f'yaw: {ground_truth.pose.orientation.z}\n'
+                # f'roll, pitch: {ground_truth.pose.orientation.x, ground_truth.pose.orientation.y}\n'
+                # f'Received Pose :\n'
+                # f'grount t - x: {ground_truth.pose.position.x}, y = {ground_truth.pose.position.y}, z = {ground_truth.pose.position.z}\n'
                 f'Position - x: {msg_pose.pose.position.x}, y = {msg_pose.pose.position.y}, z = {msg_pose.pose.position.z}\n'
                 f'Closest point: {closest_point.get_point()}\n'
                 f'Closest Lane: {closest_lane_name}\n'
