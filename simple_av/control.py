@@ -84,8 +84,8 @@ class Data_box(Node):
 
     def get_longitudinal_command(self):
         longitudinal_command = LongitudinalCommand()
-        longitudinal_command.speed = 1.0  # example value
-        longitudinal_command.acceleration = 0.05  # example value
+        longitudinal_command.speed = 0.5  # example value
+        longitudinal_command.acceleration = 0.01  # example value
         return longitudinal_command
     
     def get_gear_command(self):
