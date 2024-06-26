@@ -7,8 +7,38 @@ from geometry_msgs.msg import PoseStamped
 from autoware_auto_vehicle_msgs.msg import VelocityReport
 from autoware_auto_vehicle_msgs.msg import GearCommand
 from autoware_auto_control_msgs.msg import AckermannControlCommand, AckermannLateralCommand, LongitudinalCommand
-from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy  # Import necessary modules
+from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
+import time
 
+class PIDController:
+    def __init__(self, kp, ki, kd, setpoint, sample_time=0.01):
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.setpoint = setpoint
+        self.sample_time = sample_time
+        self.current_time = time.time()
+        self.last_time = self.current_time
+        self.cumulative_error = 0.0
+        self.last_error = 0.0
+
+    def update(self, current_value):
+        error = self.setpoint - current_value
+        self.current_time = time.time()
+        delta_time = self.current_time - self.last_time
+        delta_error = error - self.last_error
+
+        if delta_time >= self.sample_time:
+            self.cumulative_error += error * delta_time
+            rate_error = delta_error / delta_time
+
+            output = self.kp * error + self.ki * self.cumulative_error + self.kd * rate_error
+
+            self.last_time = self.current_time
+            self.last_error = error
+
+            return output
+        return 0.0
 
 class Data_box(Node):
     def __init__(self):
@@ -39,26 +69,19 @@ class Data_box(Node):
         # Create publishers for control and gear commands
         self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
-    
+        
+        # PID controller setup
+        self.target_speed = 5.0  # target speed in m/s
+        self.pid_controller = PIDController(kp=0.5, ki=0.01, kd=0.05, setpoint=self.target_speed)
 
     def control(self):
         pose_message, report_message = self.get_latest_messages()
-        if pose_message and report_message:
-            self.get_logger().info(
-                f'Received Pose :\n'
-                f'Position - x: {pose_message.pose.position.x}, y = {pose_message.pose.position.y}, z = {pose_message.pose.position.z}\n'
-                f'Received Velocity Report:\n'
-                f'sec: {report_message.header.stamp.sec}\n'
-                f'Longitudinal Velocity: {report_message.longitudinal_velocity}, Lateral Velocity: {report_message.lateral_velocity}\n'
-                f'Heading Rate: {report_message.heading_rate}\n'
-            )
-            self.get_logger().info("-------------------------------------------------------------------------------------")
-    
+            
         # Create and publish control command
         control_msg = AckermannControlCommand()
         control_msg.stamp = self.get_clock().now().to_msg()
         control_msg.lateral = self.get_lateral_command()
-        control_msg.longitudinal = self.get_longitudinal_command()
+        control_msg.longitudinal = self.get_longitudinal_command(report_message.longitudinal_velocity if report_message else 0.0)
         self.control_publisher.publish(control_msg)
 
         # Create and publish gear command
@@ -82,18 +105,21 @@ class Data_box(Node):
         lateral_command.steering_tire_rotation_rate = 0.0  # example value
         return lateral_command
 
-    def get_longitudinal_command(self):
+    def get_longitudinal_command(self, current_speed):
         longitudinal_command = LongitudinalCommand()
-        longitudinal_command.speed = 0.5  # example value
-        longitudinal_command.acceleration = 0.01  # example value
+        longitudinal_command.speed = self.target_speed
+        accel = self.pid_controller.update(current_speed)
+        longitudinal_command.acceleration = accel
+        self.get_logger().info(
+                f'speed: {current_speed} :\n'
+                f'accel : {accel}\n'
+            )
         return longitudinal_command
     
     def get_gear_command(self):
         gear = GearCommand()
         gear.stamp=self.get_clock().now().to_msg()
         gear.command=GearCommand.DRIVE
-
-
 
 def main(args=None):
     rclpy.init(args=args)
@@ -105,8 +131,6 @@ def main(args=None):
         
     node.destroy_node()
     rclpy.shutdown()
-
-
 
 if __name__ == '__main__':
     main()
