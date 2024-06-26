@@ -11,36 +11,39 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPo
 import time
 
 class PIDController:
-    def __init__(self, kp, ki, kd, setpoint, sample_time=0.01):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-        self.setpoint = setpoint
-        self.sample_time = sample_time
+    def __init__(self, p_gain, i_gain, d_gain, target_vel, delta_t=0.01):
+        self.kp = p_gain
+        self.ki = i_gain
+        self.kd = d_gain
+        self.target_vel = target_vel
+        self.delta_t = delta_t
         self.current_time = time.time()
         self.last_time = self.current_time
-        self.cumulative_error = 0.0
-        self.last_error = 0.0
+        self.integrated_error = 0.0
+        self.privous_error = 0.0 # previous tracking error
 
-    def update(self, current_value):
-        error = self.setpoint - current_value
+    def updatePID(self, observed_vel):
+        error = self.target_vel - observed_vel # tracking error to the traget velocity
         self.current_time = time.time()
         delta_time = self.current_time - self.last_time
-        delta_error = error - self.last_error
 
-        if delta_time >= self.sample_time:
-            self.cumulative_error += error * delta_time
-            rate_error = delta_error / delta_time
+        self.integrated_error += error * delta_time  # integral of the tracking error
+        derivative = (error - self.privous_error) / delta_time # derivative of the tracking error
 
-            output = self.kp * error + self.ki * self.cumulative_error + self.kd * rate_error
+        # calculate control input
+        P = self.kp * error
+        I = self.ki * self.integrated_error * 0
+        D = self.kd * derivative
 
-            self.last_time = self.current_time
-            self.last_error = error
+        acc_cmd = P + I + D
 
-            return output
-        return 0.0
+        self.last_time = self.current_time
+        self.privous_error = error
 
-class Data_box(Node):
+        return acc_cmd
+
+
+class VehicleControl(Node):
     def __init__(self):
         super().__init__('control')
 
@@ -72,7 +75,7 @@ class Data_box(Node):
         
         # PID controller setup
         self.target_speed = 5.0  # target speed in m/s
-        self.pid_controller = PIDController(kp=0.5, ki=0.01, kd=0.05, setpoint=self.target_speed)
+        self.pid_controller = PIDController(p_gain=0.5, i_gain=0.2, d_gain=0.2, target_vel=self.target_speed)
 
     def control(self):
         pose_message, report_message = self.get_latest_messages()
@@ -108,7 +111,7 @@ class Data_box(Node):
     def get_longitudinal_command(self, current_speed):
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.target_speed
-        accel = self.pid_controller.update(current_speed)
+        accel = self.pid_controller.updatePID(current_speed)
         longitudinal_command.acceleration = accel
         self.get_logger().info(
                 f'speed: {current_speed} :\n'
@@ -123,7 +126,7 @@ class Data_box(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Data_box()
+    node = VehicleControl()
 
     while rclpy.ok():
         rclpy.spin_once(node)
