@@ -136,7 +136,6 @@ class VehicleControl(Node):
         return lateral_command
 
     def get_longitudinal_command(self, current_speed):
-        pass
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.target_speed
         accel = self.pid_controller.updatePID(current_speed)
