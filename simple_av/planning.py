@@ -7,6 +7,7 @@ from geometry_msgs.msg import PoseStamped, Point
 import math
 from collections import deque
 from simple_av_msgs.msg import LocalizationMsg
+from simple_av_msgs.msg import LookAheadMsg
 import numpy as np
 
 
@@ -28,6 +29,9 @@ class Planning(Node):
 
         # Create subscriber to /localization/location topic
         self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
+
+        # Initialize the publisher
+        self.planning_publisher = self.create_publisher(LookAheadMsg, 'simple_av/planning/lookahead_point', 10)
 
         self.pose = PoseStamped()  # Initialize pose
         self.location = LocalizationMsg()  # Initialize location
@@ -234,7 +238,11 @@ class Planning(Node):
         
         next_point_index, next_point, status = self.get_next_point(vehicle_pose, current_closest_point_index)
         print(next_point_index, next_point, status)
+        
         # publishing the next point
+        lookahead_point = LookAheadMsg()
+        lookahead_point.look_ahead_point = Point(x=next_point['x'], y=next_point['y'], z=next_point['z'])
+        self.planning_publisher.publish(lookahead_point)
     
 
     def global_path_planning(self):
@@ -261,7 +269,6 @@ class Planning(Node):
         else:  # path planning has been done and the path list is created.
             # print("local planning ...")
             self.local_planning()
-        # publishes: next_point
 
 
 def main(args=None):
