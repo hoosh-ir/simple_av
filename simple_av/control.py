@@ -10,6 +10,7 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPo
 from simple_av_msgs.msg import LookAheadMsg
 import time
 import math
+from collections import deque
 
 class PIDController:
     def __init__(self, p_gain, i_gain, d_gain, target_vel, delta_t=0.01):
@@ -21,6 +22,7 @@ class PIDController:
         self.current_time = time.time()
         self.last_time = self.current_time
         self.integrated_error = 0.0
+        self.slidingWindow = deque(maxlen=10) # for storing only the 10 most recent errors
         self.previous_error = 0.0
 
     def updatePID(self, observed_vel):
@@ -28,7 +30,14 @@ class PIDController:
         self.current_time = time.time()
         delta_time = self.current_time - self.last_time
 
-        self.integrated_error += error * delta_time
+        print("debug 0 - size: ", len(self.slidingWindow))
+        print("debug 1 - sum: ", sum(self.slidingWindow))
+        print("debug 1 - delta time: ", delta_time)
+        print("debug 1 - integrated_error: ", sum(self.slidingWindow) * delta_time)
+
+        self.slidingWindow.append(error)
+
+        self.integrated_error = sum(self.slidingWindow) * delta_time
         derivative = (error - self.previous_error) / delta_time
 
         P = self.kp * error
@@ -66,10 +75,10 @@ class VehicleControl(Node):
             self.ground_truth_callback,
             10
         )
-        self.subscriptionReport = self.create_subscription(
+        self.subscriptionVelocityReport = self.create_subscription(
             VelocityReport,
             '/vehicle/status/velocity_status',
-            self.report_callback,
+            self.velocity_report_callback,
             10
         )
         self.subscriptionLookahead = self.create_subscription(
@@ -81,7 +90,7 @@ class VehicleControl(Node):
 
         self.pose = PoseStamped()
         self.ground_truth = PoseStamped()
-        self.report = None
+        self.velocity_report = VelocityReport()
         self.lookahead_point = LookAheadMsg()
 
         self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
@@ -91,18 +100,12 @@ class VehicleControl(Node):
         self.pid_controller = PIDController(p_gain=0.5, i_gain=0.2, d_gain=0.2, target_vel=self.target_speed)
 
     def control(self):
-        # if self.pose and self.ground_truth:
-        #     self.get_logger().info(
-        #         f'pose: {self.pose.pose.position.x, self.pose.pose.position.y, self.pose.pose.position.z} :\n'
-        #         f'ground truth: {self.ground_truth.pose.orientation.x, self.ground_truth.pose.orientation.y, self.ground_truth.pose.orientation.z} :\n'
-        #         f'lookahead: {self.lookahead_point.look_ahead_point.x, self.lookahead_point.look_ahead_point.x, self.lookahead_point.look_ahead_point.x} :\n'
-        #     )
-        pose_message, report_message = self.get_latest_messages()
+        pose_message, velocity_report_message = self.get_latest_messages()
 
         control_msg = AckermannControlCommand()
         control_msg.stamp = self.get_clock().now().to_msg()
         control_msg.lateral = self.get_lateral_command()
-        control_msg.longitudinal = self.get_longitudinal_command(report_message.longitudinal_velocity if report_message else 0.0)
+        control_msg.longitudinal = self.get_longitudinal_command(velocity_report_message.longitudinal_velocity if velocity_report_message else 0.0)
         self.control_publisher.publish(control_msg)
 
         gear_msg = GearCommand()
@@ -116,23 +119,25 @@ class VehicleControl(Node):
     def ground_truth_callback(self, msg):
         self.ground_truth = msg
 
-    def report_callback(self, msg):
-        self.report = msg
+    def velocity_report_callback(self, msg):
+        self.velocity_report = msg
 
     def lookahead_callback(self, msg):
         self.lookahead_point = msg
 
     def get_latest_messages(self):
-        return self.pose, self.report
+        return self.pose, self.velocity_report
     
     def get_lateral_command(self):
         lateral_command = AckermannLateralCommand()
-        if self.pose and self.lookahead_point and self.ground_truth:
-            lateral_command.steering_tire_angle = self.pure_pursuit_steering_angle()
-            lateral_command.steering_tire_rotation_rate = 0.0
-        else:
-            lateral_command.steering_tire_angle = 0.0
-            lateral_command.steering_tire_rotation_rate = 0.0
+        # if self.pose and self.lookahead_point and self.ground_truth:
+        #     lateral_command.steering_tire_angle = self.pure_pursuit_steering_angle()
+        #     lateral_command.steering_tire_rotation_rate = 0.0
+        # else:
+        #     lateral_command.steering_tire_angle = 0.0
+        #     lateral_command.steering_tire_rotation_rate = 0.0
+        lateral_command.steering_tire_angle = 0.0
+        lateral_command.steering_tire_rotation_rate = 0.0
         return lateral_command
 
     def get_longitudinal_command(self, current_speed):
