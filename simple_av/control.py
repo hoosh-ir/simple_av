@@ -97,7 +97,7 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
 
         self.target_speed = 5.0
-        self.pid_controller = PIDController(p_gain=1, i_gain=0.4, d_gain=0.05, target_vel=self.target_speed)
+        self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125, target_vel=self.target_speed)
 
     def control(self):
         pose_message, velocity_report_message = self.get_latest_messages()
@@ -187,7 +187,8 @@ def main(args=None):
     node = VehicleControl()
 
     while rclpy.ok():
-        rclpy.spin_once(node)
+        # rclpy.spin_once(node)
+        rclpy.spin_once(node, timeout_sec=0.01)  # Set timeout to 0 to avoid delay
         node.control()
         
     node.destroy_node()
