@@ -29,20 +29,20 @@ class PIDController:
         error = self.target_vel - observed_vel
         self.current_time = time.time()
         delta_time = self.current_time - self.last_time
-
-        print("debug 0 - size: ", len(self.slidingWindow))
-        print("debug 1 - sum: ", sum(self.slidingWindow))
-        print("debug 1 - delta time: ", delta_time)
-        print("debug 1 - integrated_error: ", sum(self.slidingWindow) * delta_time)
-
         self.slidingWindow.append(error)
 
         self.integrated_error = sum(self.slidingWindow) * delta_time
         derivative = (error - self.previous_error) / delta_time
 
+        print("debug 0 - sum: ", sum(self.slidingWindow))
+        print("debug 0 - delta time: ", delta_time)
+        
+
         P = self.kp * error
         I = self.ki * self.integrated_error
         D = self.kd * derivative
+        
+        print("P: ", P, " I: ", I, " D: ", D)
 
         acc_cmd = P + I + D
 
@@ -97,7 +97,7 @@ class VehicleControl(Node):
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
 
         self.target_speed = 5.0
-        self.pid_controller = PIDController(p_gain=0.5, i_gain=0.2, d_gain=0.2, target_vel=self.target_speed)
+        self.pid_controller = PIDController(p_gain=1, i_gain=0.4, d_gain=0.05, target_vel=self.target_speed)
 
     def control(self):
         pose_message, velocity_report_message = self.get_latest_messages()
