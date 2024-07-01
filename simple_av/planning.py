@@ -264,6 +264,7 @@ class Planning(Node):
         # find the lookahead point in front of the vehicle. 8 < look ahead point distance <= 10
         for i in range(first_ahead_point, len(self.path)):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
+            print("debug 5.5 - dist ", dist)
             if dist <= self.lookahead_distance and dist > self.lookahead_distance - self.densify_interval:
                 print("debug 4 - dist ", dist)
                 return i, self.path[i], "continue"
