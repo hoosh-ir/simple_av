@@ -303,7 +303,6 @@ class Localization(Node):
             return closest_point, closest_lane_name, min_distance
         local_search_area = self.build_search_area(closest_lane_name)
         pose_msg = self.get_pose_msg()
-        pose_msg = self.get_pose_msg()
         ground_truth = self.get_groundTruth_msg()
         if pose_msg:
             current_position = Point(pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
