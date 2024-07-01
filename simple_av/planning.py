@@ -84,7 +84,7 @@ class Planning(Node):
         """
         return self.location
 
-    def calculate_distance(aelf, point1, point2):
+    def calculate_distance(self, point1, point2):
         """
         Calculate the Euclidean distance between two points.
         Args:
@@ -144,6 +144,41 @@ class Planning(Node):
             return None
         return self.map_data[lane_number - 1]
 
+    def densify_waypoints(self, waypoints, interval=2.0):
+        """
+        Densifies a list of waypoints by adding interpolated points so that there is 
+        approximately one point every `interval` meters.
+        
+        Args:
+            waypoints (list): A list of dictionaries, each with 'x', 'y', and 'z' keys representing
+                            a waypoint's coordinates.
+            interval (float): The desired distance (in meters) between consecutive waypoints.
+
+        Returns:
+            list: A new list of waypoints with additional interpolated points.
+        """
+        dense_waypoints = []
+
+        for i in range(len(waypoints) - 1):
+            start = waypoints[i]
+            end = waypoints[i + 1]
+            dense_waypoints.append(start)
+
+            distance = self.calculate_distance(start, end)
+            num_points = int(distance // interval)
+
+            for j in range(1, num_points + 1):
+                t = j / num_points
+                new_point = {
+                    'x': start['x'] + t * (end['x'] - start['x']),
+                    'y': start['y'] + t * (end['y'] - start['y']),
+                    'z': start['z'] + t * (end['z'] - start['z'])
+                }
+                dense_waypoints.append(new_point)
+
+        dense_waypoints.append(waypoints[-1])
+        return dense_waypoints
+
     def generate_path_points(self):
         """
         Create a path of points based on the path of lanes.
@@ -157,7 +192,8 @@ class Planning(Node):
 
         # Remove duplicate points
         points = [points[i] for i in range(len(points)) if i == 0 or (points[i]['x'] != points[i - 1]['x'] or points[i]['y'] != points[i - 1]['y'] or points[i]['z'] != points[i - 1]['z'])]
-        self.path = points
+        # Densify path of points
+        self.path = self.densify_waypoints(points)
     
 
     def bfs(self, start_lanelet, dest_lanelet):
@@ -187,7 +223,7 @@ class Planning(Node):
                     queue.append((next_lanelet, path + [next_lanelet]))
         
 
-    def get_next_point(self, vehicle_pose, current_closest_point_index, threshold=5.0): 
+    def get_next_point(self, vehicle_pose, current_closest_point_index, threshold=2.0): 
         """
         Get the next point for the vehicle to move towards.
         Args:
@@ -238,6 +274,7 @@ class Planning(Node):
         
         next_point_index, next_point, status = self.get_next_point(vehicle_pose, current_closest_point_index)
         print(next_point_index, next_point, status)
+        print("path len: ", len(self.path))
         
         # publishing the next point
         lookahead_point = LookAheadMsg()
@@ -252,12 +289,14 @@ class Planning(Node):
         location = self.current_location()
         if location:
             print("path planning ... ")
-            start_lanelet = location.closest_lane_names.data
+            # start_lanelet = location.closest_lane_names.data
+            start_lanelet = "lanelet215"
             dest_lanelet = "lanelet319"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
+                print(self.path)
 
     
     def planning(self):
