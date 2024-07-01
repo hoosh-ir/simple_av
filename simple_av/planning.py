@@ -40,6 +40,9 @@ class Planning(Node):
         self.path_as_lanes = None  # List of lanes from start point to destination
         self.path = None  # List of points in order of path_as_lanes
         
+        self.lookahead_distance = 10.0
+        self.path_densify_interval = 2.0
+        
     
     def load_map_data(self):
         """
@@ -144,15 +147,15 @@ class Planning(Node):
             return None
         return self.map_data[lane_number - 1]
 
-    def densify_waypoints(self, waypoints, interval=2.0):
+    def densify_waypoints(self, waypoints):
         """
         Densifies a list of waypoints by adding interpolated points so that there is 
-        approximately one point every `interval` meters.
+        approximately one point every `path_densify_interval` meters.
         
         Args:
             waypoints (list): A list of dictionaries, each with 'x', 'y', and 'z' keys representing
                             a waypoint's coordinates.
-            interval (float): The desired distance (in meters) between consecutive waypoints.
+            path_densify_interval (float): The desired distance (in meters) between consecutive waypoints.
 
         Returns:
             list: A new list of waypoints with additional interpolated points.
@@ -165,7 +168,7 @@ class Planning(Node):
             dense_waypoints.append(start)
 
             distance = self.calculate_distance(start, end)
-            num_points = int(distance // interval)
+            num_points = int(distance // self.path_densify_interval)
 
             for j in range(1, num_points + 1):
                 t = j / num_points
@@ -223,13 +226,13 @@ class Planning(Node):
                     queue.append((next_lanelet, path + [next_lanelet]))
         
 
-    def get_next_point(self, vehicle_pose, current_closest_point_index, threshold=2.0): 
+    def find_lookahead_point(self, vehicle_pose, current_closest_point_index): 
         """
         Get the next point for the vehicle to move towards.
         Args:
             vehicle_pose (dict): The current pose of the vehicle.
             current_closest_point_index (int): The index of the current closest point in the path.
-            threshold (float): The distance threshold to consider the point as reached.
+            lookahead_distance (float): The distance lookahead_distance to consider the point as reached.
         Returns:
             tuple: The updated closest point index, the next point, and the status.
         """
@@ -239,20 +242,25 @@ class Planning(Node):
         # Calculate direction vectors
         direction_vector = self.calculate_vector(self.path[current_closest_point_index], self.path[current_closest_point_index + 1])
         direction_vector_of_robot = self.calculate_vector(self.path[current_closest_point_index], vehicle_pose)   
+        first_ahead_point = 0
 
-        # Check if the robot has passed the waypoint.
-        if self.calculate_dot_product(direction_vector, direction_vector_of_robot) >= 0: # Has passed, AHEAD
-            current_closest_point_index = current_closest_point_index + 1
-        else: # Behind
-            if self.calculate_distance(vehicle_pose, self.path[current_closest_point_index]) < threshold:
-                current_closest_point_index = current_closest_point_index + 1
-            else:
-                current_closest_point_index = current_closest_point_index
+        # Find the first point ahead of the vehicle
+        if self.calculate_dot_product(direction_vector, direction_vector_of_robot) >= 0: # Vehicle is ahead of the point
+            first_ahead_point = current_closest_point_index + 1
+        else: # Vehicle is Behind of the point
+            first_ahead_point = current_closest_point_index
         
-        if current_closest_point_index >= len(self.path):
-            return current_closest_point_index, None, "End of waypoints"
+        # final point in path
+        if first_ahead_point >= len(self.path):
+            return first_ahead_point, self.path[first_ahead_point], "End of waypoints"
+        
+        # find the lookahead point in front of the vehicle. 8 < look ahead point distance <= 10
+        for i in range(first_ahead_point, len(self.path)):
+            dist = self.calculate_distance(vehicle_pose, self.path[i])
+            if dist > 10:
+                return i-1, self.path[i-1], "continue"
             
-        return current_closest_point_index, self.path[current_closest_point_index], "continue"
+        return first_ahead_point, self.path[first_ahead_point], "End of waypoints"
 
     
     def local_planning(self):
@@ -272,7 +280,7 @@ class Planning(Node):
         except StopIteration:
             print("The closest point to the vehicle is not in the list.")
         
-        next_point_index, next_point, status = self.get_next_point(vehicle_pose, current_closest_point_index)
+        next_point_index, next_point, status = self.find_lookahead_point(vehicle_pose, current_closest_point_index)
         print(next_point_index, next_point, status)
         
         # publishing the next point
