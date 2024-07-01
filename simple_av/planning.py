@@ -264,7 +264,6 @@ class Planning(Node):
         # find the lookahead point in front of the vehicle. 8 < look ahead point distance <= 10
         for i in range(first_ahead_point, len(self.path)):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
-            print("debug 5.5 - dist ", dist)
             if dist <= self.lookahead_distance and dist > self.lookahead_distance - self.densify_interval:
                 print("debug 4 - dist ", dist)
                 return i, self.path[i], "continue"
@@ -283,12 +282,18 @@ class Planning(Node):
             print("error - no location or pose input")
             return None
         vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
-        current_closest_point_to_vehicle = {'x': location.closest_point.x, 'y': location.closest_point.y, 'z': location.closest_point.z}
+        
+        # current_closest_point_to_vehicle = {'x': location.closest_point.x, 'y': location.closest_point.y, 'z': location.closest_point.z}
+        # try:
+        #     current_closest_point_index = next(i for i, point in enumerate(self.path) if point == current_closest_point_to_vehicle)
+        # except StopIteration:
+        #     print("The closest point to the vehicle is not in the list.")
+        
         # Finding the index of the closest point in path list
-        try:
-            current_closest_point_index = next(i for i, point in enumerate(self.path) if point == current_closest_point_to_vehicle)
-        except StopIteration:
-            print("The closest point to the vehicle is not in the list.")
+        distances_to_vehicle = []
+        for p in self.path:
+            distances_to_vehicle.append(self.calculate_distance(p, vehicle_pose))
+        current_closest_point_index = distances_to_vehicle.index(min(distances_to_vehicle))
         
         next_point_index, next_point, status = self.find_lookahead_point(vehicle_pose, current_closest_point_index)
         print("output: ", next_point_index, self.calculate_distance(vehicle_pose, next_point), status)
