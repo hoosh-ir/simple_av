@@ -41,7 +41,7 @@ class Planning(Node):
         self.path = None  # List of points in order of path_as_lanes
         
         self.lookahead_distance = 10.0
-        self.path_densify_interval = 2.0
+        self.densify_interval = 2.0
         
     
     def load_map_data(self):
@@ -150,12 +150,12 @@ class Planning(Node):
     def densify_waypoints(self, waypoints):
         """
         Densifies a list of waypoints by adding interpolated points so that there is 
-        approximately one point every `path_densify_interval` meters.
+        approximately one point every `densify_interval` meters.
         
         Args:
             waypoints (list): A list of dictionaries, each with 'x', 'y', and 'z' keys representing
                             a waypoint's coordinates.
-            path_densify_interval (float): The desired distance (in meters) between consecutive waypoints.
+            densify_interval (float): The desired distance (in meters) between consecutive waypoints.
 
         Returns:
             list: A new list of waypoints with additional interpolated points.
@@ -168,7 +168,7 @@ class Planning(Node):
             dense_waypoints.append(start)
 
             distance = self.calculate_distance(start, end)
-            num_points = int(distance // self.path_densify_interval)
+            num_points = int(distance // self.densify_interval)
 
             for j in range(1, num_points + 1):
                 t = j / num_points
@@ -257,8 +257,8 @@ class Planning(Node):
         # find the lookahead point in front of the vehicle. 8 < look ahead point distance <= 10
         for i in range(first_ahead_point, len(self.path)):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
-            if dist > 10:
-                return i-1, self.path[i-1], "continue"
+            if dist <= self.lookahead_distance and dist > self.lookahead_distance - self.densify_interval:
+                return i, self.path[i], "continue"
             
         return first_ahead_point, self.path[first_ahead_point], "End of waypoints"
 
@@ -296,8 +296,8 @@ class Planning(Node):
         location = self.current_location()
         if location:
             print("path planning ... ")
-            # start_lanelet = location.closest_lane_names.data
-            start_lanelet = "lanelet215"
+            start_lanelet = location.closest_lane_names.data
+            # start_lanelet = "lanelet215"
             dest_lanelet = "lanelet319"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:

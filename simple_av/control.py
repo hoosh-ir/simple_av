@@ -130,14 +130,14 @@ class VehicleControl(Node):
     
     def get_lateral_command(self):
         lateral_command = AckermannLateralCommand()
-        # if self.pose and self.lookahead_point and self.ground_truth:
-        #     lateral_command.steering_tire_angle = self.pure_pursuit_steering_angle()
-        #     lateral_command.steering_tire_rotation_rate = 0.0
-        # else:
-        #     lateral_command.steering_tire_angle = 0.0
-        #     lateral_command.steering_tire_rotation_rate = 0.0
-        lateral_command.steering_tire_angle = 0.0
-        lateral_command.steering_tire_rotation_rate = 0.0
+        if self.pose and self.lookahead_point and self.ground_truth:
+            lateral_command.steering_tire_angle = self.pure_pursuit_steering_angle()
+            lateral_command.steering_tire_rotation_rate = 0.0
+        else:
+            lateral_command.steering_tire_angle = 0.0
+            lateral_command.steering_tire_rotation_rate = 0.0
+        # lateral_command.steering_tire_angle = 0.0
+        # lateral_command.steering_tire_rotation_rate = 0.0
         return lateral_command
 
     def get_longitudinal_command(self, current_speed):
