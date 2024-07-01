@@ -274,7 +274,6 @@ class Planning(Node):
         
         next_point_index, next_point, status = self.get_next_point(vehicle_pose, current_closest_point_index)
         print(next_point_index, next_point, status)
-        print("path len: ", len(self.path))
         
         # publishing the next point
         lookahead_point = LookAheadMsg()
@@ -296,7 +295,6 @@ class Planning(Node):
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
-                print(self.path)
 
     
     def planning(self):
