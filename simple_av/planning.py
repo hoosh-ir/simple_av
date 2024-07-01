@@ -193,10 +193,11 @@ class Planning(Node):
             for waypoint in waypoints:
                 points.append(waypoint)
 
-        # Remove duplicate points
-        points = [points[i] for i in range(len(points)) if i == 0 or (points[i]['x'] != points[i - 1]['x'] or points[i]['y'] != points[i - 1]['y'] or points[i]['z'] != points[i - 1]['z'])]
         # Densify path of points
-        self.path = self.densify_waypoints(points)
+        points = self.densify_waypoints(points)
+
+        # Remove duplicate points
+        self.path = [points[i] for i in range(len(points)) if i == 0 or (points[i]['x'] != points[i - 1]['x'] or points[i]['y'] != points[i - 1]['y'] or points[i]['z'] != points[i - 1]['z'])]
     
 
     def bfs(self, start_lanelet, dest_lanelet):
@@ -236,7 +237,11 @@ class Planning(Node):
         Returns:
             tuple: The updated closest point index, the next point, and the status.
         """
+
+        print("debug 0 - current closest index: ", current_closest_point_index, len(self.path))
+        print("debug 0 - vehicle pose: ", vehicle_pose)
         if current_closest_point_index == len(self.path) - 1:
+            print("debug 1 - shiit: ", len(self.path))
             return current_closest_point_index, self.path[current_closest_point_index], "End of waypoints"
             
         # Calculate direction vectors
@@ -250,16 +255,20 @@ class Planning(Node):
         else: # Vehicle is Behind of the point
             first_ahead_point = current_closest_point_index
         
+        print("debug 2 - first_ahead_point ", first_ahead_point)
         # final point in path
         if first_ahead_point >= len(self.path):
+            print("debug 3 - saaag: ", len(self.path))
             return first_ahead_point, self.path[first_ahead_point], "End of waypoints"
         
         # find the lookahead point in front of the vehicle. 8 < look ahead point distance <= 10
         for i in range(first_ahead_point, len(self.path)):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
             if dist <= self.lookahead_distance and dist > self.lookahead_distance - self.densify_interval:
+                print("debug 4 - dist ", dist)
                 return i, self.path[i], "continue"
             
+        print("debug 5 - first_ahead_point ", first_ahead_point)
         return first_ahead_point, self.path[first_ahead_point], "End of waypoints"
 
     
@@ -281,7 +290,7 @@ class Planning(Node):
             print("The closest point to the vehicle is not in the list.")
         
         next_point_index, next_point, status = self.find_lookahead_point(vehicle_pose, current_closest_point_index)
-        print(next_point_index, next_point, status)
+        print("output: ", next_point_index, self.calculate_distance(vehicle_pose, next_point), status)
         
         # publishing the next point
         lookahead_point = LookAheadMsg()
@@ -298,11 +307,12 @@ class Planning(Node):
             print("path planning ... ")
             start_lanelet = location.closest_lane_names.data
             # start_lanelet = "lanelet215"
-            dest_lanelet = "lanelet319"
+            dest_lanelet = "lanelet155"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
+                print("path of lanes: ", self.path)
 
     
     def planning(self):

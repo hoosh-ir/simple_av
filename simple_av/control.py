@@ -34,16 +34,11 @@ class PIDController:
         self.integrated_error = sum(self.slidingWindow) * delta_time
         derivative = (error - self.previous_error) / delta_time
 
-        print("debug 0 - sum: ", sum(self.slidingWindow))
-        print("debug 0 - delta time: ", delta_time)
-        
-
         P = self.kp * error
         I = self.ki * self.integrated_error
         D = self.kd * derivative
         
-        print("P: ", P, " I: ", I, " D: ", D)
-
+        # print("P: ", P, " I: ", I, " D: ", D)
         acc_cmd = P + I + D
 
         self.last_time = self.current_time
@@ -163,7 +158,7 @@ class VehicleControl(Node):
 
         ld2 = lookahead_x ** 2 + lookahead_y ** 2
         steering_angle = math.atan2(2.0 * local_y, ld2)
-
+        
         self.get_logger().info(
             f'steering_angle: {steering_angle} :\n'
         )
