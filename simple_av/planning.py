@@ -312,7 +312,6 @@ class Planning(Node):
         if location:
             print("path planning ... ")
             start_lanelet = location.closest_lane_names.data
-            # start_lanelet = "lanelet215"
             dest_lanelet = "lanelet156"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:

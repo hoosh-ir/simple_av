@@ -11,6 +11,8 @@ from simple_av_msgs.msg import LookAheadMsg
 import time
 import math
 from collections import deque
+import numpy as np
+
 
 class PIDController:
     def __init__(self, p_gain, i_gain, d_gain, target_vel, delta_t=0.01):
@@ -91,8 +93,9 @@ class VehicleControl(Node):
         self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
 
-        self.target_speed = 5.0
+        self.target_speed = 5.0 # m/s
         self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125, target_vel=self.target_speed)
+        self.wheel_base = 2.75 # meters
 
     def control(self):
         pose_message, velocity_report_message = self.get_latest_messages()
@@ -126,7 +129,10 @@ class VehicleControl(Node):
     def get_lateral_command(self):
         lateral_command = AckermannLateralCommand()
         if self.pose and self.lookahead_point and self.ground_truth:
-            lateral_command.steering_tire_angle = self.pure_pursuit_steering_angle()
+            steer = self.pure_pursuit_steering_angle()
+            steer1 = self.pure_pursuit_steering_angle1()
+            print("debug 0 - ", steer, " ---- ", steer1)
+            lateral_command.steering_tire_angle = steer1
             lateral_command.steering_tire_rotation_rate = 0.0
         else:
             lateral_command.steering_tire_angle = 0.0
@@ -140,10 +146,10 @@ class VehicleControl(Node):
         longitudinal_command.speed = self.target_speed
         accel = self.pid_controller.updatePID(current_speed)
         longitudinal_command.acceleration = accel
-        self.get_logger().info(
-            f'speed: {current_speed} :\n'
-            f'accel : {accel}\n'
-        )
+        # self.get_logger().info(
+        #     f'speed: {current_speed} :\n'
+        #     f'accel : {accel}\n'
+        # )
         return longitudinal_command
     
     def pure_pursuit_steering_angle(self):
@@ -153,15 +159,30 @@ class VehicleControl(Node):
         lookahead_y = self.lookahead_point.look_ahead_point.y - self.pose.pose.position.y
 
         yaw = self.get_yaw_from_pose(self.ground_truth)
+
         local_x = math.cos(yaw) * lookahead_x + math.sin(yaw) * lookahead_y
         local_y = -math.sin(yaw) * lookahead_x + math.cos(yaw) * lookahead_y
 
         ld2 = lookahead_x ** 2 + lookahead_y ** 2
         steering_angle = math.atan2(2.0 * local_y, ld2)
         
-        self.get_logger().info(
-            f'steering_angle: {steering_angle} :\n'
-        )
+        # self.get_logger().info(
+        #     f'steering_angle: {steering_angle} :\n'
+        # )
+
+        return steering_angle
+    
+    def pure_pursuit_steering_angle1(self):
+
+        lookahead_x =self.lookahead_point.look_ahead_point.x - self.pose.pose.position.x
+        lookahead_y = self.lookahead_point.look_ahead_point.y - self.pose.pose.position.y
+
+        yaw = self.get_yaw_from_pose(self.ground_truth)
+        ld2 = lookahead_x ** 2 + lookahead_y ** 2
+
+        # calculate control input
+        alpha = np.arctan2(lookahead_y, lookahead_x) - yaw # vehicle heading angle error
+        steering_angle = np.arctan2(2.0 * self.wheel_base * math.sin(alpha) / ld2, 1.0) # given from geometric relationship
 
         return steering_angle
 
