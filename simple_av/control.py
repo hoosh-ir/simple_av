@@ -15,36 +15,76 @@ import numpy as np
 
 
 class PIDController:
-    def __init__(self, p_gain, i_gain, d_gain, target_vel, delta_t=0.01):
-        self.kp = p_gain
-        self.ki = i_gain
-        self.kd = d_gain
-        self.target_vel = target_vel
-        self.delta_t = delta_t
+    def __init__(self):
+
+        self.kp_s = 1.5
+        self.ki_s = 0.5
+        self.kd_s = 0.125
+
+        self.kp_d = 1
+        self.ki_d = 0.1
+        self.kd_d = 0.2
+
         self.current_time = time.time()
         self.last_time = self.current_time
-        self.integrated_error = 0.0
-        self.slidingWindow = deque(maxlen=10) # for storing only the 10 most recent errors
-        self.previous_error = 0.0
 
-    def updatePID(self, observed_vel):
+        self.integrated_error_s = 0.0
+        self.integrated_error_d = 0.0
+
+        self.slidingWindow_s = deque(maxlen=10) # for storing only the 10 most recent errors
+        self.slidingWindow_d = deque(maxlen=10) # for storing only the 10 most recent errors
+
+        self.previous_error_s = 0.0
+        self.previous_error_d = 0.0
+
+    def control_by_distance(self, brake_line):
+        error = brake_line
+        self.current_time = time.time()
+        delta_time = self.current_time - self.last_time
+        self.slidingWindow_d.append(error)
+
+        self.integrated_error_d = sum(self.slidingWindow_d) * delta_time
+        derivative = (error - self.previous_error_d) / delta_time
+
+        P = self.kp_d * error
+        I = self.ki_d * self.integrated_error_d
+        D = self.kd_d * derivative
+
+        self.last_time = self.current_time
+        self.previous_error_d = error
+
+        return P + I + D
+
+
+
+    def control_by_speed(self, observed_vel):
         error = self.target_vel - observed_vel
         self.current_time = time.time()
         delta_time = self.current_time - self.last_time
-        self.slidingWindow.append(error)
+        self.slidingWindow_s.append(error)
 
-        self.integrated_error = sum(self.slidingWindow) * delta_time
-        derivative = (error - self.previous_error) / delta_time
+        self.integrated_error_s = sum(self.slidingWindow_s) * delta_time
+        derivative = (error - self.previous_error_s) / delta_time
 
-        P = self.kp * error
-        I = self.ki * self.integrated_error
-        D = self.kd * derivative
+        P = self.kp_s * error
+        I = self.ki_s * self.integrated_error_s
+        D = self.kd_s * derivative
         
-        # print("P: ", P, " I: ", I, " D: ", D)
         acc_cmd = P + I + D
 
         self.last_time = self.current_time
-        self.previous_error = error
+        self.previous_error_s = error
+
+        return acc_cmd
+
+    def updatePID(self, observed_vel, brake_line, speed_limit, status):
+        self.target_vel = speed_limit
+        if status == 'final waypoint':
+           print("debug 0: distance control")
+           acc_cmd =  self.control_by_distance(brake_line)
+        else:
+            print("debug 0: speed control")
+            acc_cmd = self.control_by_speed(observed_vel)
 
         return acc_cmd
 
@@ -93,8 +133,7 @@ class VehicleControl(Node):
         self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
 
-        self.target_speed = 5.0 # m/s
-        self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125, target_vel=self.target_speed)
+        self.pid_controller = PIDController()
         self.wheel_base = 2.75 # meters
 
     def control(self):
@@ -146,14 +185,20 @@ class VehicleControl(Node):
 
     def get_longitudinal_command(self):
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
+        brake_line = self.lookahead_point.brake_line
+        speed_limit = self.lookahead_point.speed_limit
+        status = self.lookahead_point.status.data
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.target_speed
-        accel = self.pid_controller.updatePID(current_speed)
+        accel = self.pid_controller.updatePID(current_speed, brake_line, speed_limit, status)
         longitudinal_command.acceleration = accel
-        # self.get_logger().info(
-        #     f'speed: {current_speed} :\n'
-        #     f'accel : {accel}\n'
-        # )
+        self.get_logger().info(
+            f'speed: {current_speed} :\n'
+            f'accel : {accel}\n'
+            f'brake_line: {brake_line} :\n'
+            f'speed_limit : {speed_limit}\n'
+            f'status : {status}\n'
+        )
         return longitudinal_command
     
     def pure_pursuit_steering_angle(self):
