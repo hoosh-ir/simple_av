@@ -283,12 +283,6 @@ class Planning(Node):
             return None
         vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
         
-        # current_closest_point_to_vehicle = {'x': location.closest_point.x, 'y': location.closest_point.y, 'z': location.closest_point.z}
-        # try:
-        #     current_closest_point_index = next(i for i, point in enumerate(self.path) if point == current_closest_point_to_vehicle)
-        # except StopIteration:
-        #     print("The closest point to the vehicle is not in the list.")
-        
         # Finding the index of the closest point in path list
         distances_to_vehicle = []
         for p in self.path:
@@ -304,7 +298,7 @@ class Planning(Node):
         self.planning_publisher.publish(lookahead_point)
     
 
-    def global_path_planning(self):
+    def mission_planning(self):
         """
         Perform global path planning to create a path from the current location to the destination.
         """
@@ -312,7 +306,8 @@ class Planning(Node):
         if location:
             print("path planning ... ")
             start_lanelet = location.closest_lane_names.data
-            dest_lanelet = "lanelet156"
+            # dest_lanelet = "lanelet156"
+            dest_lanelet = "lanelet319"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
@@ -325,7 +320,7 @@ class Planning(Node):
         Main planning function to decide between global and local planning.
         """
         if not self.isPathPlanned: # path planning has not yet done.
-            self.global_path_planning()
+            self.mission_planning()
         else:  # path planning has been done and the path list is created.
             # print("local planning ...")
             self.local_planning()

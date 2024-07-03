@@ -131,7 +131,10 @@ class VehicleControl(Node):
         if self.pose and self.lookahead_point and self.ground_truth:
             steer = self.pure_pursuit_steering_angle()
             steer1 = self.pure_pursuit_steering_angle1()
-            print(steer, " ---- ", steer1)
+            if steer == steer1:
+                print("same: ", steer, " ---- ", steer1)
+            else:
+                print("different: ", steer, " ---- ", steer1)
             lateral_command.steering_tire_angle = steer1
             lateral_command.steering_tire_rotation_rate = 0.0
         else:
@@ -182,7 +185,7 @@ class VehicleControl(Node):
 
         # calculate control input
         alpha = np.arctan2(lookahead_y, lookahead_x) - yaw # vehicle heading angle error
-        steering_angle = np.arctan2(2.0 * self.wheel_base * math.sin(alpha) / ld2, 1.0) # given from geometric relationship
+        steering_angle = np.arctan2(2.0 * self.wheel_base * np.sin(alpha) / ld2, 1.0) # given from geometric relationship
 
         return steering_angle
 
