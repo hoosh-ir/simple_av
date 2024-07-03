@@ -131,7 +131,7 @@ class VehicleControl(Node):
         if self.pose and self.lookahead_point and self.ground_truth:
             steer = self.pure_pursuit_steering_angle()
             steer1 = self.pure_pursuit_steering_angle1()
-            print("debug 0 - ", steer, " ---- ", steer1)
+            print(steer, " ---- ", steer1)
             lateral_command.steering_tire_angle = steer1
             lateral_command.steering_tire_rotation_rate = 0.0
         else:
@@ -164,7 +164,7 @@ class VehicleControl(Node):
         local_y = -math.sin(yaw) * lookahead_x + math.cos(yaw) * lookahead_y
 
         ld2 = lookahead_x ** 2 + lookahead_y ** 2
-        steering_angle = math.atan2(2.0 * local_y, ld2)
+        steering_angle = math.atan2(2.0 * local_y * self.wheel_base, ld2)
         
         # self.get_logger().info(
         #     f'steering_angle: {steering_angle} :\n'
