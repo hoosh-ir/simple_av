@@ -4,6 +4,7 @@ import json
 import os
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
+from std_msgs.msg import String
 import math
 from collections import deque
 from simple_av_msgs.msg import LocalizationMsg
@@ -282,10 +283,9 @@ class Planning(Node):
 
         vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
         current_closest_point_to_vehicle = self.find_closest_waypoint_to_vehicle(location, vehicle_pose)
-        next_point_index, next_point, status = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle)
-        print("output: ", next_point_index, self.calculate_distance(vehicle_pose, next_point), status)
+        next_point_index, next_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle)
 
-        return next_point_index, next_point, status
+        return next_point_index, next_point
     
 
     def behavioural_planning(self, location, vehicle_pose):
@@ -329,14 +329,19 @@ class Planning(Node):
                 return None
             
             next_point_index, next_point = self.local_planning(location, vehicle_pose)
-            brake_line, status = self.behavioural_planning(location, vehicle_pose)
- 
+
+            status = String()
+            brake_line, _status = self.behavioural_planning(location, vehicle_pose)
+            status.data = _status
+    
             # publishing
             lookahead_point = LookAheadMsg()
             lookahead_point.look_ahead_point = Point(x=next_point['x'], y=next_point['y'], z=next_point['z'])
             lookahead_point.brake_line = brake_line
             lookahead_point.status = status
             lookahead_point.speed_limit = speed_limit
+
+            print("output: ", next_point_index, brake_line, status.data)
             self.planning_publisher.publish(lookahead_point)
 
 

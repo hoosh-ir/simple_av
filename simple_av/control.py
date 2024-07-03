@@ -189,7 +189,7 @@ class VehicleControl(Node):
         speed_limit = self.lookahead_point.speed_limit
         status = self.lookahead_point.status.data
         longitudinal_command = LongitudinalCommand()
-        longitudinal_command.speed = self.target_speed
+        longitudinal_command.speed = self.velocity_report.longitudinal_velocity
         accel = self.pid_controller.updatePID(current_speed, brake_line, speed_limit, status)
         longitudinal_command.acceleration = accel
         self.get_logger().info(
