@@ -98,12 +98,13 @@ class VehicleControl(Node):
         self.wheel_base = 2.75 # meters
 
     def control(self):
-        pose_message, velocity_report_message = self.get_latest_messages()
+        if not self.velocity_report and not self.lookahead_point and not self.pose and not self.ground_truth:
+            return
 
         control_msg = AckermannControlCommand()
         control_msg.stamp = self.get_clock().now().to_msg()
         control_msg.lateral = self.get_lateral_command()
-        control_msg.longitudinal = self.get_longitudinal_command(velocity_report_message.longitudinal_velocity if velocity_report_message else 0.0)
+        control_msg.longitudinal = self.get_longitudinal_command()
         self.control_publisher.publish(control_msg)
 
         gear_msg = GearCommand()
@@ -130,21 +131,21 @@ class VehicleControl(Node):
         lateral_command = AckermannLateralCommand()
         if self.pose and self.lookahead_point and self.ground_truth:
             steer = self.pure_pursuit_steering_angle()
-            steer1 = self.pure_pursuit_steering_angle1()
-            if steer == steer1:
-                print("same: ", steer, " ---- ", steer1)
-            else:
-                print("different: ", steer, " ---- ", steer1)
-            lateral_command.steering_tire_angle = steer1
+            # steer1 = self.pure_pursuit_steering_angle1()
+            # if steer == steer1:
+            #     print("same: ", steer, " ---- ", steer1)
+            # else:
+            #     print("different: ", steer, " ---- ", steer1)
+            lateral_command.steering_tire_angle = steer
             lateral_command.steering_tire_rotation_rate = 0.0
         else:
             lateral_command.steering_tire_angle = 0.0
             lateral_command.steering_tire_rotation_rate = 0.0
-        # lateral_command.steering_tire_angle = 0.0
-        # lateral_command.steering_tire_rotation_rate = 0.0
+
         return lateral_command
 
-    def get_longitudinal_command(self, current_speed):
+    def get_longitudinal_command(self):
+        current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.target_speed
         accel = self.pid_controller.updatePID(current_speed)

@@ -241,7 +241,7 @@ class Planning(Node):
 
         if current_closest_point_index == len(self.path) - 1:
             print("debug 1 - shiit: ", len(self.path))
-            return current_closest_point_index, self.path[current_closest_point_index], "End of waypoints"
+            return current_closest_point_index, self.path[current_closest_point_index]
             
         # Calculate direction vectors
         direction_vector = self.calculate_vector(self.path[current_closest_point_index], self.path[current_closest_point_index + 1])
@@ -256,16 +256,15 @@ class Planning(Node):
         
         # final point in path
         if first_ahead_point >= len(self.path):
-            return first_ahead_point, self.path[first_ahead_point], "End of waypoints"
+            return first_ahead_point, self.path[first_ahead_point]
         
         # find the lookahead point in front of the vehicle. 8 < look ahead point distance <= 10
         for i in range(first_ahead_point, len(self.path)):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
             if dist <= self.lookahead_distance and dist > self.lookahead_distance - self.densify_interval:
-                print("debug 4 - dist ", dist)
-                return i, self.path[i], "continue"
+                return i, self.path[i]
             
-        return first_ahead_point, self.path[first_ahead_point], "End of waypoints"
+        return first_ahead_point, self.path[first_ahead_point]
 
     def find_closest_waypoint_to_vehicle(self, location, vehicle_pose):
         # Finding the index of the closest point in path list
@@ -292,8 +291,11 @@ class Planning(Node):
     def behavioural_planning(self, location, vehicle_pose):
         
         vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
-        
-
+        dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1])
+        if dist_to_final_waypoint <= self.hazard_distance:
+            return dist_to_final_waypoint, 'final waypoint'
+        return dist_to_final_waypoint, 'continue'
+            
 
     def mission_planning(self):
         """
@@ -316,6 +318,7 @@ class Planning(Node):
         """
         Main planning function to decide between global and local planning.
         """
+        speed_limit = 5.0
         if not self.isPathPlanned:
             self.mission_planning()
         else:
@@ -325,12 +328,15 @@ class Planning(Node):
                 print("error - no location or pose input")
                 return None
             
-            next_point_index, next_point, status = self.local_planning(location, vehicle_pose)
-            self.behavioural_planning(location, vehicle_pose)
-
+            next_point_index, next_point = self.local_planning(location, vehicle_pose)
+            brake_line, status = self.behavioural_planning(location, vehicle_pose)
+ 
             # publishing
             lookahead_point = LookAheadMsg()
             lookahead_point.look_ahead_point = Point(x=next_point['x'], y=next_point['y'], z=next_point['z'])
+            lookahead_point.brake_line = brake_line
+            lookahead_point.status = status
+            lookahead_point.speed_limit = speed_limit
             self.planning_publisher.publish(lookahead_point)
 
 
