@@ -42,7 +42,7 @@ class Planning(Node):
         self.path = None  # List of points in order of path_as_lanes
         
         self.lookahead_distance = 10.0 # meters
-        self.hazard_distance = 20.0 # meters
+        self.stop_distance = 20.0 # meters
         self.densify_interval = 2.0 # meters
         
     
@@ -74,20 +74,6 @@ class Planning(Node):
             msg (LocalizationMsg): The localization message received from the topic.
         """
         self.location = msg
-
-    def current_pose(self):
-        """
-        Returns:
-            PoseStamped: The current pose of the vehicle.
-        """
-        return self.pose
-
-    def current_location(self):
-        """
-        Returns:
-            LocalizationMsg: The current location of the vehicle.
-        """
-        return self.location
 
     def calculate_distance(self, point1, point2):
         """
@@ -267,7 +253,7 @@ class Planning(Node):
             
         return first_ahead_point, self.path[first_ahead_point]
 
-    def find_closest_waypoint_to_vehicle(self, location, vehicle_pose):
+    def find_closest_waypoint_to_vehicle(self, vehicle_pose):
         # Finding the index of the closest point in path list
         distances_to_vehicle = []
         for p in self.path:
@@ -276,23 +262,23 @@ class Planning(Node):
         return current_closest_point_to_vehicle
 
 
-    def local_planning(self, location, vehicle_pose):
+    def local_planning(self):
         """
         Perform local path planning to determine the next point for the vehicle.
         """
 
-        vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
-        current_closest_point_to_vehicle = self.find_closest_waypoint_to_vehicle(location, vehicle_pose)
+        vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
+        current_closest_point_to_vehicle = self.find_closest_waypoint_to_vehicle(vehicle_pose)
         next_point_index, next_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle)
 
         return next_point_index, next_point
     
 
-    def behavioural_planning(self, location, vehicle_pose):
+    def behavioural_planning(self):
         
         vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
         dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1])
-        if dist_to_final_waypoint <= self.hazard_distance:
+        if dist_to_final_waypoint <= self.stop_distance:
             return dist_to_final_waypoint, 'final waypoint'
         return dist_to_final_waypoint, 'continue'
             
@@ -301,10 +287,9 @@ class Planning(Node):
         """
         Perform global path planning to create a path from the current location to the destination.
         """
-        location = self.current_location()
-        if location:
+        if self.location:
             print("path planning ... ")
-            start_lanelet = location.closest_lane_names.data
+            start_lanelet = self.location.closest_lane_names.data
             dest_lanelet = "lanelet151"
             # dest_lanelet = "lanelet319"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
@@ -322,16 +307,14 @@ class Planning(Node):
         if not self.isPathPlanned:
             self.mission_planning()
         else:
-            location = self.current_location()
-            vehicle_pose = self.current_pose()
-            if not location and not vehicle_pose:
+            if not self.location and not self.pose:
                 print("error - no location or pose input")
                 return None
             
-            next_point_index, next_point = self.local_planning(location, vehicle_pose)
+            next_point_index, next_point = self.local_planning()
 
             status = String()
-            brake_line, _status = self.behavioural_planning(location, vehicle_pose)
+            brake_line, _status = self.behavioural_planning()
             status.data = _status
     
             # publishing
