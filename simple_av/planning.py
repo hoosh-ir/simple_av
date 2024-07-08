@@ -321,7 +321,7 @@ class Planning(Node):
             # publishing
             lookahead_point = LookAheadMsg()
             lookahead_point.look_ahead_point = Point(x=next_point['x'], y=next_point['y'], z=next_point['z'])
-            lookahead_point.stop_point = stop_point
+            lookahead_point.stop_point = Point(x=stop_point['x'], y=stop_point['y'], z=stop_point['z'])
             lookahead_point.status = status
             lookahead_point.speed_limit = speed_limit
 
