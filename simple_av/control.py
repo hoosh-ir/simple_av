@@ -37,8 +37,21 @@ class PIDController:
         self.previous_error_s = 0.0
         self.previous_error_d = 0.0
 
-    def control_by_distance(self, brake_line):
-        error = brake_line
+    def calculate_distance(self, point1, point2):
+        """
+        Calculate the Euclidean distance between two points.
+        Args:
+            point1 (dict): The first point with 'x', 'y', 'z' coordinates.
+            point2 (dict): The second point with 'x', 'y', 'z' coordinates.
+        Returns:
+            float: The Euclidean distance between the two points.
+        """
+        return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
+    
+    def control_by_distance(self, stop_point, vehicle_pose):
+        
+        
+        error = self.calculate_distance(stop_point, vehicle_pose)
         self.current_time = time.time()
         delta_time = self.current_time - self.last_time
         self.slidingWindow_d.append(error)
@@ -54,8 +67,6 @@ class PIDController:
         self.previous_error_d = error
 
         return P + I + D
-
-
 
     def control_by_speed(self, observed_vel):
         error = self.target_vel - observed_vel
@@ -77,11 +88,11 @@ class PIDController:
 
         return acc_cmd
 
-    def updatePID(self, observed_vel, brake_line, speed_limit, status):
+    def updatePID(self, observed_vel, stop_point, speed_limit, status, vehicle_pose):
         self.target_vel = speed_limit
-        if status == 'final waypoint':
+        if status == 'stop point':
            print("debug 0: distance control")
-           acc_cmd =  self.control_by_distance(brake_line)
+           acc_cmd =  self.control_by_distance(stop_point, vehicle_pose)
         else:
             print("debug 0: speed control")
             acc_cmd = self.control_by_speed(observed_vel)
@@ -137,6 +148,7 @@ class VehicleControl(Node):
         self.wheel_base = 2.75 # meters
 
     def control(self):
+
         if not self.velocity_report and not self.lookahead_point and not self.pose and not self.ground_truth:
             return
 
@@ -185,17 +197,20 @@ class VehicleControl(Node):
 
     def get_longitudinal_command(self):
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
-        brake_line = self.lookahead_point.brake_line
+
+        stop_point = self.lookahead_point.stop_point
         speed_limit = self.lookahead_point.speed_limit
         status = self.lookahead_point.status.data
+
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
-        accel = self.pid_controller.updatePID(current_speed, brake_line, speed_limit, status)
+
+        accel = self.pid_controller.updatePID(current_speed, stop_point, speed_limit, status, self.pose)
         longitudinal_command.acceleration = accel
         self.get_logger().info(
             f'speed: {current_speed} :\n'
             f'accel : {accel}\n'
-            f'brake_line: {brake_line} :\n'
+            f'brake_line: {stop_point} :\n'
             f'speed_limit : {speed_limit}\n'
             f'status : {status}\n'
         )
