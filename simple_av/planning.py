@@ -278,9 +278,10 @@ class Planning(Node):
         
         vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
         dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1])
+        print("debug distance: ", dist_to_final_waypoint)
         if dist_to_final_waypoint <= self.stop_distance:
-            return dist_to_final_waypoint, 'final waypoint'
-        return dist_to_final_waypoint, 'continue'
+            return self.path[-1], 'stop point'
+        return None, 'continue'
             
 
     def mission_planning(self):
@@ -314,17 +315,17 @@ class Planning(Node):
             next_point_index, next_point = self.local_planning()
 
             status = String()
-            brake_line, _status = self.behavioural_planning()
+            stop_point, _status = self.behavioural_planning()
             status.data = _status
     
             # publishing
             lookahead_point = LookAheadMsg()
             lookahead_point.look_ahead_point = Point(x=next_point['x'], y=next_point['y'], z=next_point['z'])
-            lookahead_point.brake_line = brake_line
+            lookahead_point.stop_point = stop_point
             lookahead_point.status = status
             lookahead_point.speed_limit = speed_limit
 
-            print("output: ", next_point_index, brake_line, status.data)
+            print("output: ", status.data, next_point_index, stop_point)
             self.planning_publisher.publish(lookahead_point)
 
 
