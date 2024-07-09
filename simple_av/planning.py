@@ -291,7 +291,7 @@ class Planning(Node):
             status = 'PrepareToStop'
         
         return self.path[-1], status
-            
+           
 
     def mission_planning(self):
         """
@@ -300,7 +300,7 @@ class Planning(Node):
         if self.location:
             print("path planning ... ")
             start_lanelet = self.location.closest_lane_names.data
-            dest_lanelet = "lanelet156"
+            dest_lanelet = "lanelet144"
             # dest_lanelet = "lanelet319"
             # dest_lanelet = "lanelet335"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
@@ -309,7 +309,7 @@ class Planning(Node):
                 print("path of lanes: ", self.path_as_lanes)
                 print("path of lanes: ", self.path)
 
-    
+  
     def planning(self):
         """
         Main planning function to decide between global and local planning.

@@ -155,6 +155,7 @@ class VehicleControl(Node):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         target_speed = self.lookahead_point.speed_limit
+        accel = 0.0
 
         if self.lookahead_point.status.data == "Cruise":
             target_speed = self.lookahead_point.speed_limit
@@ -164,7 +165,10 @@ class VehicleControl(Node):
         else:
             target_speed = 0.0
 
-        accel = self.pid_controller.updatePID(current_speed, target_speed)
+        if self.lookahead_point.status.data == "PrepareToStop":
+            accel = 0.0
+        else:
+            accel = self.pid_controller.updatePID(current_speed, target_speed)
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
