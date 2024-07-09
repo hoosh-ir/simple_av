@@ -153,6 +153,7 @@ class VehicleControl(Node):
     def get_longitudinal_command(self):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
+        target_speed = self.lookahead_point.speed_limit
 
         if self.lookahead_point.status.data == "continue":
             target_speed = self.lookahead_point.speed_limit
@@ -166,22 +167,21 @@ class VehicleControl(Node):
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
-
-        accel = self.pid_controller.updatePID(current_speed, stop_point, speed_limit, status, self.pose.pose.position)
         longitudinal_command.acceleration = accel
+
         self.get_logger().info(
             f'speed: {current_speed} :\n'
             # f'accel : {accel}\n'
             # f'brake_line: {stop_point} :\n'
             # f'speed_limit : {speed_limit}\n'
-            f'status : {status}\n'
+            f'status : {self.lookahead_point.status.data}\n'
         )
         return longitudinal_command
     
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         if distance_to_stop < 5.0:
             return 0.0
-        return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / 10))
+        return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / 20))
 
     def pure_pursuit_steering_angle(self):
         # print("coordinates: ",  self.lookahead_point.look_ahead_point.x, self.lookahead_point.look_ahead_point.y, self.lookahead_point.look_ahead_point.z)
