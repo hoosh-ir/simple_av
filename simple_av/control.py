@@ -132,7 +132,7 @@ class VehicleControl(Node):
         return self.pose, self.velocity_report
     
     def calculate_distance(self, point1, point2):
-        return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2 + (point1.z - point2.z)**2)
+        return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
     
     def get_lateral_command(self):
         lateral_command = AckermannLateralCommand()
@@ -185,7 +185,7 @@ class VehicleControl(Node):
         else:
             # Gradual deceleration based on distance and current speed
             # Using a nonlinear deceleration curve for smoother braking
-            return min(self.speed_limit, current_speed * (distance_to_stop / 20)**0.5)
+            return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / 20)**0.5)
 
 
     def pure_pursuit_steering_angle(self):
