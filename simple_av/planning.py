@@ -75,7 +75,7 @@ class Planning(Node):
         """
         self.location = msg
 
-    def calculate_distance(self, point1, point2):
+    def calculate_distance(self, point1, point2, z=True):
         """
         Calculate the Euclidean distance between two points.
         Args:
@@ -84,9 +84,12 @@ class Planning(Node):
         Returns:
             float: The Euclidean distance between the two points.
         """
-        return np.sqrt((point1['x'] - point2['x'])**2 + 
-                    (point1['y'] - point2['y'])**2 + 
-                    (point1['z'] - point2['z'])**2)
+        if z:
+            return np.sqrt((point1['x'] - point2['x'])**2 + 
+                        (point1['y'] - point2['y'])**2 + 
+                        (point1['z'] - point2['z'])**2)
+        else:
+            return np.sqrt((point1['x'] - point2['x'])**2 + (point1['y'] - point2['y'])**2)
 
     def calculate_vector(self, point1, point2):
         """
@@ -277,7 +280,7 @@ class Planning(Node):
     def behavioural_planning(self):
         
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1])
+        dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
         print("debug distance: ", dist_to_final_waypoint)
         if dist_to_final_waypoint <= self.stop_distance:
             return self.path[-1], 'stop point'
@@ -291,9 +294,9 @@ class Planning(Node):
         if self.location:
             print("path planning ... ")
             start_lanelet = self.location.closest_lane_names.data
-            # dest_lanelet = "lanelet151"
+            dest_lanelet = "lanelet144"
             # dest_lanelet = "lanelet319"
-            dest_lanelet = "lanelet335"
+            # dest_lanelet = "lanelet335"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
