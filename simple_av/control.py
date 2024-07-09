@@ -15,89 +15,41 @@ import numpy as np
 
 
 class PIDController:
-    def __init__(self):
-
-        self.kp_s = 1.5
-        self.ki_s = 0.5
-        self.kd_s = 0.125
-
-        self.kp_d = 1
-        self.ki_d = 0.1
-        self.kd_d = 0.2
+    def __init__(self, p_gain, i_gain, d_gain, delta_t=0.01):
+        self.kp = p_gain
+        self.ki = i_gain
+        self.kd = d_gain
+        self.delta_t = delta_t
 
         self.current_time = time.time()
         self.last_time = self.current_time
 
-        self.integrated_error_s = 0.0
-        self.integrated_error_d = 0.0
+        self.integrated_error = 0.0
 
-        self.slidingWindow_s = deque(maxlen=10) # for storing only the 10 most recent errors
-        self.slidingWindow_d = deque(maxlen=10) # for storing only the 10 most recent errors
+        self.slidingWindow = deque(maxlen=10) # for storing only the 10 most recent errors
 
-        self.previous_error_s = 0.0
-        self.previous_error_d = 0.0
-
-    def calculate_distance(self, point1, point2):
-        """
-        Calculate the Euclidean distance between two points.
-        Args:
-            point1 (dict): The first point with 'x', 'y', 'z' coordinates.
-            point2 (dict): The second point with 'x', 'y', 'z' coordinates.
-        Returns:
-            float: The Euclidean distance between the two points.
-        """
-        return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
+        self.previous_error = 0.0
     
-    def control_by_distance(self, stop_point, vehicle_pose):
-        
-        
-        error = self.calculate_distance(stop_point, vehicle_pose)
+    def updatePID(self, observed_vel, target_vel):
+        error = target_vel - observed_vel
         self.current_time = time.time()
         delta_time = self.current_time - self.last_time
-        self.slidingWindow_d.append(error)
+        self.slidingWindow.append(error)
 
-        self.integrated_error_d = sum(self.slidingWindow_d) * delta_time
-        derivative = (error - self.previous_error_d) / delta_time
+        self.integrated_error = sum(self.slidingWindow) * delta_time
+        derivative = (error - self.previous_error) / delta_time
 
-        P = self.kp_d * error
-        I = self.ki_d * self.integrated_error_d
-        D = self.kd_d * derivative
-
-        self.last_time = self.current_time
-        self.previous_error_d = error
-
-        return P + I + D
-
-    def control_by_speed(self, observed_vel):
-        error = self.target_vel - observed_vel
-        self.current_time = time.time()
-        delta_time = self.current_time - self.last_time
-        self.slidingWindow_s.append(error)
-
-        self.integrated_error_s = sum(self.slidingWindow_s) * delta_time
-        derivative = (error - self.previous_error_s) / delta_time
-
-        P = self.kp_s * error
-        I = self.ki_s * self.integrated_error_s
-        D = self.kd_s * derivative
+        P = self.kp * error
+        I = self.ki * self.integrated_error
+        D = self.kd * derivative
         
         acc_cmd = P + I + D
 
         self.last_time = self.current_time
-        self.previous_error_s = error
+        self.previous_error = error
 
         return acc_cmd
 
-    def updatePID(self, observed_vel, stop_point, speed_limit, status, vehicle_pose):
-        self.target_vel = speed_limit
-        if status == 'stop point':
-           print("debug 0: distance control")
-           acc_cmd =  self.control_by_distance(stop_point, vehicle_pose)
-        else:
-            print("debug 0: speed control")
-            acc_cmd = self.control_by_speed(observed_vel)
-
-        return acc_cmd
 
 
 class VehicleControl(Node):
@@ -144,7 +96,7 @@ class VehicleControl(Node):
         self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
 
-        self.pid_controller = PIDController()
+        self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125)
         self.wheel_base = 2.75 # meters
 
     def control(self):
@@ -178,6 +130,9 @@ class VehicleControl(Node):
     def get_latest_messages(self):
         return self.pose, self.velocity_report
     
+    def calculate_distance(self, point1, point2):
+        return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
+    
     def get_lateral_command(self):
         lateral_command = AckermannLateralCommand()
         if self.pose and self.lookahead_point and self.ground_truth:
@@ -196,26 +151,38 @@ class VehicleControl(Node):
         return lateral_command
 
     def get_longitudinal_command(self):
+
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
 
-        stop_point = self.lookahead_point.stop_point
-        speed_limit = self.lookahead_point.speed_limit
-        status = self.lookahead_point.status.data
+        if self.lookahead_point.status.data == "continue":
+            target_speed = self.lookahead_point.speed_limit
+        elif self.lookahead_point.status.data == "stop point":
+            distance_to_stop = self.calculate_distance(self.lookahead_point.stop_point, self.pose.pose.position)
+            target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
+        else:
+            target_speed = 0.0
+
+        accel = self.pid_controller.updatePID(target_speed, current_speed)
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
 
-        accel = self.pid_controller.updatePID(current_speed, stop_point, speed_limit, status, self.pose)
+        accel = self.pid_controller.updatePID(current_speed, stop_point, speed_limit, status, self.pose.pose.position)
         longitudinal_command.acceleration = accel
         self.get_logger().info(
             f'speed: {current_speed} :\n'
-            f'accel : {accel}\n'
-            f'brake_line: {stop_point} :\n'
-            f'speed_limit : {speed_limit}\n'
+            # f'accel : {accel}\n'
+            # f'brake_line: {stop_point} :\n'
+            # f'speed_limit : {speed_limit}\n'
             f'status : {status}\n'
         )
         return longitudinal_command
     
+    def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
+        if distance_to_stop < 5.0:
+            return 0.0
+        return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / 10))
+
     def pure_pursuit_steering_angle(self):
         # print("coordinates: ",  self.lookahead_point.look_ahead_point.x, self.lookahead_point.look_ahead_point.y, self.lookahead_point.look_ahead_point.z)
     
