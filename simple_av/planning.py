@@ -283,12 +283,14 @@ class Planning(Node):
         
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
-        print("debug distance: ", dist_to_final_waypoint)
+
+        status = 'Cruise'
         if dist_to_final_waypoint <= self.stop_distance:
-            return self.path[-1], 'Decelerate'
+            status ='Decelerate'
         elif dist_to_final_waypoint <= 2.0:
-            return self.path[-1], 'PrepareToStop'
-        return self.path[-1], 'Cruise'
+            status = 'PrepareToStop'
+        
+        return self.path[-1], status
             
 
     def mission_planning(self):
