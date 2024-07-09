@@ -41,9 +41,11 @@ class Planning(Node):
         self.path_as_lanes = None  # List of lanes from start point to destination
         self.path = None  # List of points in order of path_as_lanes
         
-        self.lookahead_distance = 10.0 # meters
-        self.stop_distance = 20.0 # meters
+        self.speed_limit = 10.0 # meters/second
+        self.lookahead_distance = self.speed_limit * 2 # meters
+        self.stop_distance = self.speed_limit * 4 # meters
         self.densify_interval = 2.0 # meters
+        
         
     
     def load_map_data(self):
@@ -294,7 +296,7 @@ class Planning(Node):
         if self.location:
             print("path planning ... ")
             start_lanelet = self.location.closest_lane_names.data
-            dest_lanelet = "lanelet144"
+            dest_lanelet = "lanelet156"
             # dest_lanelet = "lanelet319"
             # dest_lanelet = "lanelet335"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
@@ -308,7 +310,6 @@ class Planning(Node):
         """
         Main planning function to decide between global and local planning.
         """
-        speed_limit = 5.0
         if not self.isPathPlanned:
             self.mission_planning()
         else:
@@ -327,7 +328,7 @@ class Planning(Node):
             lookahead_point.look_ahead_point = Point(x=next_point['x'], y=next_point['y'], z=next_point['z'])
             lookahead_point.stop_point = Point(x=stop_point['x'], y=stop_point['y'], z=stop_point['z'])
             lookahead_point.status = status
-            lookahead_point.speed_limit = speed_limit
+            lookahead_point.speed_limit = self.speed_limit
 
             print("output: ", status.data, next_point_index, stop_point)
             self.planning_publisher.publish(lookahead_point)
