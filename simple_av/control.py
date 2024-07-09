@@ -31,6 +31,7 @@ class PIDController:
         self.previous_error = 0.0
     
     def updatePID(self, observed_vel, target_vel):
+        print("debug 3: ", target_vel, observed_vel)
         error = target_vel - observed_vel
         self.current_time = time.time()
         delta_time = self.current_time - self.last_time
@@ -131,7 +132,7 @@ class VehicleControl(Node):
         return self.pose, self.velocity_report
     
     def calculate_distance(self, point1, point2):
-        return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
+        return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2 + (point1.z - point2.z)**2)
     
     def get_lateral_command(self):
         lateral_command = AckermannLateralCommand()
@@ -163,7 +164,7 @@ class VehicleControl(Node):
         else:
             target_speed = 0.0
 
-        accel = self.pid_controller.updatePID(target_speed, current_speed)
+        accel = self.pid_controller.updatePID(current_speed, target_speed)
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
@@ -172,16 +173,20 @@ class VehicleControl(Node):
         self.get_logger().info(
             f'speed: {current_speed} :\n'
             # f'accel : {accel}\n'
-            # f'brake_line: {stop_point} :\n'
+            f'stop distance: {self.calculate_distance(self.lookahead_point.stop_point, self.pose.pose.position)} :\n'
             # f'speed_limit : {speed_limit}\n'
             f'status : {self.lookahead_point.status.data}\n'
         )
         return longitudinal_command
     
-    def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
-        if distance_to_stop < 5.0:
-            return 0.0
-        return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / 20))
+    def calculate_target_speed_for_stop(self, current_speed, distance_to_stop):
+        if distance_to_stop < 1:
+            return 0.0  # Immediate stop if very close to the stop point
+        else:
+            # Gradual deceleration based on distance and current speed
+            # Using a nonlinear deceleration curve for smoother braking
+            return min(self.speed_limit, current_speed * (distance_to_stop / 20)**0.5)
+
 
     def pure_pursuit_steering_angle(self):
         # print("coordinates: ",  self.lookahead_point.look_ahead_point.x, self.lookahead_point.look_ahead_point.y, self.lookahead_point.look_ahead_point.z)
