@@ -276,12 +276,12 @@ class Planning(Node):
 
     def behavioural_planning(self):
         
-        vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
+        vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1])
         print("debug distance: ", dist_to_final_waypoint)
         if dist_to_final_waypoint <= self.stop_distance:
             return self.path[-1], 'stop point'
-        return None, 'continue'
+        return self.path[-1], 'continue'
             
 
     def mission_planning(self):
@@ -291,8 +291,9 @@ class Planning(Node):
         if self.location:
             print("path planning ... ")
             start_lanelet = self.location.closest_lane_names.data
-            dest_lanelet = "lanelet151"
+            # dest_lanelet = "lanelet151"
             # dest_lanelet = "lanelet319"
+            dest_lanelet = "lanelet335"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
