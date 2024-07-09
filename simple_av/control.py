@@ -156,9 +156,9 @@ class VehicleControl(Node):
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
         target_speed = self.lookahead_point.speed_limit
 
-        if self.lookahead_point.status.data == "continue":
+        if self.lookahead_point.status.data == "Cruise":
             target_speed = self.lookahead_point.speed_limit
-        elif self.lookahead_point.status.data == "stop point":
+        elif self.lookahead_point.status.data == "Decelerate":
             distance_to_stop = self.calculate_distance(self.lookahead_point.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
         else:
@@ -180,7 +180,7 @@ class VehicleControl(Node):
         return longitudinal_command
     
     def calculate_target_speed_for_stop(self, current_speed, distance_to_stop):
-        if distance_to_stop < 1:
+        if distance_to_stop < 2.0:
             return 0.0  # Immediate stop if very close to the stop point
         else:
             # Gradual deceleration based on distance and current speed

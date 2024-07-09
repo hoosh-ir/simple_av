@@ -250,7 +250,7 @@ class Planning(Node):
         if first_ahead_point >= len(self.path):
             return first_ahead_point, self.path[first_ahead_point]
         
-        # find the lookahead point in front of the vehicle. 8 < look ahead point distance <= 10
+        # find the lookahead point in front of the vehicle.  lookahead distance - interval < look ahead point distance <= lookahead distance
         for i in range(first_ahead_point, len(self.path)):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
             if dist <= self.lookahead_distance and dist > self.lookahead_distance - self.densify_interval:
@@ -285,8 +285,10 @@ class Planning(Node):
         dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
         print("debug distance: ", dist_to_final_waypoint)
         if dist_to_final_waypoint <= self.stop_distance:
-            return self.path[-1], 'stop point'
-        return self.path[-1], 'continue'
+            return self.path[-1], 'Decelerate'
+        elif dist_to_final_waypoint <= 2.0:
+            return self.path[-1], 'PrepareToStop'
+        return self.path[-1], 'Cruise'
             
 
     def mission_planning(self):
