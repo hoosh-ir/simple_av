@@ -4,6 +4,7 @@ import json
 import os
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
+from std_msgs.msg import String
 import math
 from collections import deque
 from simple_av_msgs.msg import LocalizationMsg
@@ -40,8 +41,11 @@ class Planning(Node):
         self.path_as_lanes = None  # List of lanes from start point to destination
         self.path = None  # List of points in order of path_as_lanes
         
-        self.lookahead_distance = 10.0
-        self.densify_interval = 2.0
+        self.speed_limit = 10.0 # meters/second
+        self.lookahead_distance = self.speed_limit * 2 # meters
+        self.stop_distance = self.speed_limit * 4 # meters
+        self.densify_interval = 2.0 # meters
+        
         
     
     def load_map_data(self):
@@ -73,21 +77,7 @@ class Planning(Node):
         """
         self.location = msg
 
-    def current_pose(self):
-        """
-        Returns:
-            PoseStamped: The current pose of the vehicle.
-        """
-        return self.pose
-
-    def current_location(self):
-        """
-        Returns:
-            LocalizationMsg: The current location of the vehicle.
-        """
-        return self.location
-
-    def calculate_distance(self, point1, point2):
+    def calculate_distance(self, point1, point2, z=True):
         """
         Calculate the Euclidean distance between two points.
         Args:
@@ -96,9 +86,12 @@ class Planning(Node):
         Returns:
             float: The Euclidean distance between the two points.
         """
-        return np.sqrt((point1['x'] - point2['x'])**2 + 
-                    (point1['y'] - point2['y'])**2 + 
-                    (point1['z'] - point2['z'])**2)
+        if z:
+            return np.sqrt((point1['x'] - point2['x'])**2 + 
+                        (point1['y'] - point2['y'])**2 + 
+                        (point1['z'] - point2['z'])**2)
+        else:
+            return np.sqrt((point1['x'] - point2['x'])**2 + (point1['y'] - point2['y'])**2)
 
     def calculate_vector(self, point1, point2):
         """
@@ -238,11 +231,9 @@ class Planning(Node):
             tuple: The updated closest point index, the next point, and the status.
         """
 
-        print("debug 0 - current closest index: ", current_closest_point_index, len(self.path))
-        print("debug 0 - vehicle pose: ", vehicle_pose)
         if current_closest_point_index == len(self.path) - 1:
             print("debug 1 - shiit: ", len(self.path))
-            return current_closest_point_index, self.path[current_closest_point_index], "End of waypoints"
+            return current_closest_point_index, self.path[current_closest_point_index]
             
         # Calculate direction vectors
         direction_vector = self.calculate_vector(self.path[current_closest_point_index], self.path[current_closest_point_index + 1])
@@ -255,81 +246,96 @@ class Planning(Node):
         else: # Vehicle is Behind of the point
             first_ahead_point = current_closest_point_index
         
-        print("debug 2 - first_ahead_point ", first_ahead_point)
         # final point in path
         if first_ahead_point >= len(self.path):
-            print("debug 3 - saaag: ", len(self.path))
-            return first_ahead_point, self.path[first_ahead_point], "End of waypoints"
+            return first_ahead_point, self.path[first_ahead_point]
         
-        # find the lookahead point in front of the vehicle. 8 < look ahead point distance <= 10
+        # find the lookahead point in front of the vehicle.  lookahead distance - interval < look ahead point distance <= lookahead distance
         for i in range(first_ahead_point, len(self.path)):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
             if dist <= self.lookahead_distance and dist > self.lookahead_distance - self.densify_interval:
-                print("debug 4 - dist ", dist)
-                return i, self.path[i], "continue"
+                return i, self.path[i]
             
-        print("debug 5 - first_ahead_point ", first_ahead_point)
-        return first_ahead_point, self.path[first_ahead_point], "End of waypoints"
+        return first_ahead_point, self.path[first_ahead_point]
 
-    
-    def local_planning(self):
-        """
-        Perform local path planning to determine the next point for the vehicle.
-        """
-        location = self.current_location()
-        vehicle_pose = self.current_pose()
-        if not location and not vehicle_pose:
-            print("error - no location or pose input")
-            return None
-        vehicle_pose = {'x': vehicle_pose.pose.position.x, 'y': vehicle_pose.pose.position.y, 'z': vehicle_pose.pose.position.z}
-        
-        # current_closest_point_to_vehicle = {'x': location.closest_point.x, 'y': location.closest_point.y, 'z': location.closest_point.z}
-        # try:
-        #     current_closest_point_index = next(i for i, point in enumerate(self.path) if point == current_closest_point_to_vehicle)
-        # except StopIteration:
-        #     print("The closest point to the vehicle is not in the list.")
-        
+    def find_closest_waypoint_to_vehicle(self, vehicle_pose):
         # Finding the index of the closest point in path list
         distances_to_vehicle = []
         for p in self.path:
             distances_to_vehicle.append(self.calculate_distance(p, vehicle_pose))
-        current_closest_point_index = distances_to_vehicle.index(min(distances_to_vehicle))
-        
-        next_point_index, next_point, status = self.find_lookahead_point(vehicle_pose, current_closest_point_index)
-        print("output: ", next_point_index, self.calculate_distance(vehicle_pose, next_point), status)
-        
-        # publishing the next point
-        lookahead_point = LookAheadMsg()
-        lookahead_point.look_ahead_point = Point(x=next_point['x'], y=next_point['y'], z=next_point['z'])
-        self.planning_publisher.publish(lookahead_point)
+        current_closest_point_to_vehicle = distances_to_vehicle.index(min(distances_to_vehicle))
+        return current_closest_point_to_vehicle
+
+
+    def local_planning(self):
+        """
+        Perform local path planning to determine the next point for the vehicle.
+        """
+
+        vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
+        current_closest_point_to_vehicle = self.find_closest_waypoint_to_vehicle(vehicle_pose)
+        next_point_index, next_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle)
+
+        return next_point_index, next_point
     
 
-    def global_path_planning(self):
+    def behavioural_planning(self):
+        
+        vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
+        dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
+
+        status = 'Cruise'
+        if dist_to_final_waypoint <= self.stop_distance:
+            status ='Decelerate'
+        elif dist_to_final_waypoint <= 2.0:
+            status = 'PrepareToStop'
+        
+        return self.path[-1], status
+           
+
+    def mission_planning(self):
         """
         Perform global path planning to create a path from the current location to the destination.
         """
-        location = self.current_location()
-        if location:
+        if self.location:
             print("path planning ... ")
-            start_lanelet = location.closest_lane_names.data
-            # start_lanelet = "lanelet215"
-            dest_lanelet = "lanelet156"
+            start_lanelet = self.location.closest_lane_names.data
+            dest_lanelet = "lanelet144"
+            # dest_lanelet = "lanelet319"
+            # dest_lanelet = "lanelet335"
             self.bfs(start_lanelet, dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
                 print("path of lanes: ", self.path)
 
-    
+  
     def planning(self):
         """
         Main planning function to decide between global and local planning.
         """
-        if not self.isPathPlanned: # path planning has not yet done.
-            self.global_path_planning()
-        else:  # path planning has been done and the path list is created.
-            # print("local planning ...")
-            self.local_planning()
+        if not self.isPathPlanned:
+            self.mission_planning()
+        else:
+            if not self.location and not self.pose:
+                print("error - no location or pose input")
+                return None
+            
+            next_point_index, next_point = self.local_planning()
+
+            status = String()
+            stop_point, _status = self.behavioural_planning()
+            status.data = _status
+    
+            # publishing
+            lookahead_point = LookAheadMsg()
+            lookahead_point.look_ahead_point = Point(x=next_point['x'], y=next_point['y'], z=next_point['z'])
+            lookahead_point.stop_point = Point(x=stop_point['x'], y=stop_point['y'], z=stop_point['z'])
+            lookahead_point.status = status
+            lookahead_point.speed_limit = self.speed_limit
+
+            print("output: ", status.data, next_point_index, stop_point)
+            self.planning_publisher.publish(lookahead_point)
 
 
 def main(args=None):
