@@ -41,11 +41,14 @@ class Planning(Node):
         self.path_as_lanes = None  # List of lanes from start point to destination
         self.path = None  # List of points in order of path_as_lanes
         
-        self.speed_limit = 10.0 # meters/second
+        self.speed_limit = 5.0 # meters/second
         self.lookahead_distance = self.speed_limit * 2 # meters
         self.stop_distance = self.speed_limit * 4 # meters
         self.densify_interval = 2.0 # meters
         
+        self.dest_lanelet = "lanelet192"
+        # dest_lanelet = "lanelet319"
+        # dest_lanelet = "lanelet335"
         
     
     def load_map_data(self):
@@ -300,10 +303,7 @@ class Planning(Node):
         if self.location:
             print("path planning ... ")
             start_lanelet = self.location.closest_lane_names.data
-            dest_lanelet = "lanelet144"
-            # dest_lanelet = "lanelet319"
-            # dest_lanelet = "lanelet335"
-            self.bfs(start_lanelet, dest_lanelet) # Creates the path
+            self.bfs(start_lanelet, self.dest_lanelet) # Creates the path
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
