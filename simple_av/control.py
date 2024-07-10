@@ -100,22 +100,6 @@ class VehicleControl(Node):
         self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125)
         self.wheel_base = 2.75 # meters
 
-    def control(self):
-
-        if not self.velocity_report and not self.lookahead_point and not self.pose and not self.ground_truth:
-            return
-
-        control_msg = AckermannControlCommand()
-        control_msg.stamp = self.get_clock().now().to_msg()
-        control_msg.lateral = self.get_lateral_command()
-        control_msg.longitudinal = self.get_longitudinal_command()
-        self.control_publisher.publish(control_msg)
-
-        gear_msg = GearCommand()
-        gear_msg.stamp = self.get_clock().now().to_msg()
-        gear_msg.command = GearCommand.DRIVE
-        self.gear_publisher.publish(gear_msg)
-
     def pose_callback(self, msg):
         self.pose = msg
 
@@ -133,16 +117,27 @@ class VehicleControl(Node):
     
     def calculate_distance(self, point1, point2):
         return np.sqrt((point1.x - point2.x)**2 + (point1.y - point2.y)**2)
+
+    def control(self):
+
+        if not self.velocity_report and not self.lookahead_point and not self.pose and not self.ground_truth:
+            return
+
+        control_msg = AckermannControlCommand()
+        control_msg.stamp = self.get_clock().now().to_msg()
+        control_msg.lateral = self.get_lateral_command()
+        control_msg.longitudinal = self.get_longitudinal_command()
+        self.control_publisher.publish(control_msg)
+
+        gear_msg = GearCommand()
+        gear_msg.stamp = self.get_clock().now().to_msg()
+        gear_msg.command = GearCommand.DRIVE
+        self.gear_publisher.publish(gear_msg)
     
     def get_lateral_command(self):
         lateral_command = AckermannLateralCommand()
         if self.pose and self.lookahead_point and self.ground_truth:
             steer = self.pure_pursuit_steering_angle()
-            # steer1 = self.pure_pursuit_steering_angle1()
-            # if steer == steer1:
-            #     print("same: ", steer, " ---- ", steer1)
-            # else:
-            #     print("different: ", steer, " ---- ", steer1)
             lateral_command.steering_tire_angle = steer
             lateral_command.steering_tire_rotation_rate = 0.0
         else:
@@ -206,9 +201,10 @@ class VehicleControl(Node):
         ld2 = lookahead_x ** 2 + lookahead_y ** 2
         steering_angle = math.atan2(2.0 * local_y * self.wheel_base, ld2)
         
-        # self.get_logger().info(
-        #     f'steering_angle: {steering_angle} :\n'
-        # )
+        self.get_logger().info(
+            f'steering_angle: {steering_angle} :\n'
+            f'yaw: {yaw} :\n'
+        )
 
         return steering_angle
     
@@ -223,6 +219,11 @@ class VehicleControl(Node):
         # calculate control input
         alpha = np.arctan2(lookahead_y, lookahead_x) - yaw # vehicle heading angle error
         steering_angle = np.arctan2(2.0 * self.wheel_base * np.sin(alpha) / ld2, 1.0) # given from geometric relationship
+
+        self.get_logger().info(
+            f'steering_angle: {steering_angle} :\n'
+            f'yaw: {yaw} :\n'
+        )
 
         return steering_angle
 
