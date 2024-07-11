@@ -142,6 +142,15 @@ class Planning(Node):
         if lane_number > len(self.map_data):
             return None
         return self.map_data[lane_number - 1]
+    
+    def update_speed_limit(self):
+        pass
+
+    def update_lookahead_distance(self):
+        pass
+
+    def detection_road_angle(self):
+        pass
 
     def densify_waypoints(self, waypoints):
         """
