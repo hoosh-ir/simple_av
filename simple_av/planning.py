@@ -341,6 +341,7 @@ class Planning(Node):
 
 
     def curve_detector(self, curves, look_ahead_point, look_ahead_point_index):
+        print("debug curve_detector")
         curve_finish_point = {}
         curve_angle = 0.0
         for k, v in curves.items():
@@ -365,6 +366,7 @@ class Planning(Node):
                 self.isCurveFinished = False
                 self.isCurveDetected = False
                 return "Cruise", 0.0
+        return "Cruise", 0.0
 
 
     def adjust_speed(self, curves, look_ahead_point, look_ahead_point_index):
@@ -445,7 +447,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
 
-            print("output: ", self.status.data, look_ahead_point_index)
+            print("output: ", self.status.data, look_ahead_point_index, self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
 
 
