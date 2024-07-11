@@ -341,7 +341,6 @@ class Planning(Node):
 
 
     def curve_detector(self, curves, look_ahead_point, look_ahead_point_index):
-        print("debug curve_detector")
         curve_finish_point = {}
         curve_angle = 0.0
         for k, v in curves.items():
