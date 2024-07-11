@@ -42,7 +42,7 @@ class PathCurveDetector:
         return math.acos(cos_theta)
 
     def find_curves_in_path(self):
-        curves = {}
+        curves = []
         if len(self.points) < 3:
             return curves
 
@@ -51,7 +51,9 @@ class PathCurveDetector:
             v2 = self.direction_vector(self.points[i], self.points[i+1])
             angle = self.angle_between_vectors(v1, v2)
             if angle > self.angle_threshold:
-                curves[angle] = self.points[i]
+                curve = {}
+                curve[angle] = self.points[i]
+                curves.append(curve)
 
         return curves
 
@@ -320,22 +322,18 @@ class Planning(Node):
         current_closest_point_to_vehicle = distances_to_vehicle.index(min(distances_to_vehicle))
         return current_closest_point_to_vehicle
 
-    def update_lookahead_distance(self, curves):
-        pass
-
 
     def adjust_speed_to_curve(self, curves, curve_angle):
         min_angle = min(curves.keys())
         max_angle = max(curves.keys())
         min_speed = float(math.floor(self.base_speed / 3.0))
-        speed = self.base_speed
         
-        if curve_angle < min_angle:
-            speed = self.base_speed
-        elif curve_angle >= max_angle:
-            speed = min_speed
-        else:
-            speed = self.base_speed - 5
+        speed = self.base_speed / 2
+
+        # if curve_angle > 0.20:
+        #     speed = min_speed
+        # else:
+        #     speed = self.base_speed/2
         
         return speed
 
@@ -345,6 +343,7 @@ class Planning(Node):
         curve_angle = 0.0
         for k, v in curves.items():
                 if look_ahead_point == v:
+                    print("debug - curve found")
                     curve_angle = k
                     self.isCurveDetected = True
                     self.isCurveStarted = False
@@ -356,7 +355,7 @@ class Planning(Node):
                 return "Turn", curve_angle
             elif self.isCurveStarted == True and self.isCurveFinished == False:
                 vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-                if self.calculate_distance(vehicle_pose, curve_finish_point) <= self.densify_interval:
+                if self.calculate_distance(vehicle_pose, curve_finish_point, False) <= self.densify_interval:
                     self.isCurveFinished = True
                     return "Cruise", 0.0
                 return "Turn", curve_angle
@@ -397,6 +396,10 @@ class Planning(Node):
 
         path_curve_detector = PathCurveDetector(self.path, angle_threshold=3)
         curves = path_curve_detector.find_curves_in_path()
+
+        print(curves)
+        return
+        
         _status = self.adjust_speed(curves, look_ahead_point, look_ahead_point_index)
 
         if dist_to_final_waypoint <= self.stop_distance:
@@ -438,7 +441,7 @@ class Planning(Node):
             look_ahead_point_index, look_ahead_point = self.local_planning()
 
             self.behavioural_planning(look_ahead_point, look_ahead_point_index)
-    
+            return
             # publishing
             lookahead_point = LookAheadMsg()
             lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
