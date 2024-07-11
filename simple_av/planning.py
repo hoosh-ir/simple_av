@@ -69,6 +69,7 @@ class Planning(Node):
             'waypoints': lanelet['waypoints'],
             'nextLanes': lanelet.get('nextLanes', []),
             'prevLanes': lanelet.get('prevLanes', []),
+            'adjacentLanes': lanelet.get('adjacentLanes', []),
         } for lanelet in self.map_data}
 
         # Create subscriber to /sensing/gnss/pose topic
@@ -100,7 +101,7 @@ class Planning(Node):
 
         self.curve_finish_point = {}
         
-        self.dest_lanelet = "lanelet192"
+        self.dest_lanelet = "lanelet223"
         # dest_lanelet = "lanelet319"
         # dest_lanelet = "lanelet335"
         
@@ -276,6 +277,10 @@ class Planning(Node):
                 if next_lanelet not in visited:
                     visited.add(next_lanelet)
                     queue.append((next_lanelet, path + [next_lanelet]))
+                    for next_adj in self.graph[next_lanelet]['adjacentLanes']:
+                        if next_adj not in visited:
+                            visited.add(next_adj)
+                            queue.append((next_adj, path + [next_adj]))
         
 
     def find_lookahead_point(self, vehicle_pose, current_closest_point_index): 
