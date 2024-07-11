@@ -152,7 +152,7 @@ class VehicleControl(Node):
         target_speed = self.lookahead_point.speed_limit
         accel = 0.0
 
-        if self.lookahead_point.status.data == "Cruise":
+        if self.lookahead_point.status.data == "Cruise" or self.lookahead_point.status.data == "Turn":
             target_speed = self.lookahead_point.speed_limit
         elif self.lookahead_point.status.data == "Decelerate":
             distance_to_stop = self.calculate_distance(self.lookahead_point.stop_point, self.pose.pose.position)

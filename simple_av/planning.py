@@ -12,7 +12,7 @@ from simple_av_msgs.msg import LookAheadMsg
 import numpy as np
 
 
-class CurveDetector:
+class PathCurveDetector:
     def __init__(self, points, angle_threshold=3):
         self.points = points
         self.angle_threshold = math.radians(angle_threshold)  # Convert threshold to radians
@@ -31,9 +31,9 @@ class CurveDetector:
 
     @staticmethod
     def angle_between_vectors(v1, v2):
-        dot_prod = CurveDetector.dot_product(v1, v2)
-        mag_v1 = CurveDetector.vector_magnitude(v1)
-        mag_v2 = CurveDetector.vector_magnitude(v2)
+        dot_prod = PathCurveDetector.dot_product(v1, v2)
+        mag_v1 = PathCurveDetector.vector_magnitude(v1)
+        mag_v2 = PathCurveDetector.vector_magnitude(v2)
         if mag_v1 == 0 or mag_v2 == 0:
             return 0
         cos_theta = dot_prod / (mag_v1 * mag_v2)
@@ -41,7 +41,7 @@ class CurveDetector:
         cos_theta = min(1.0, max(-1.0, cos_theta))
         return math.acos(cos_theta)
 
-    def detect_curves(self):
+    def find_curves_in_path(self):
         curves = {}
         if len(self.points) < 3:
             return curves
@@ -51,7 +51,7 @@ class CurveDetector:
             v2 = self.direction_vector(self.points[i], self.points[i+1])
             angle = self.angle_between_vectors(v1, v2)
             if angle > self.angle_threshold:
-                curves[self.points[i]] = angle
+                curves[angle] = self.points[i]
 
         return curves
 
@@ -85,11 +85,14 @@ class Planning(Node):
         self.path_as_lanes = None  # List of lanes from start point to destination
         self.path = None  # List of points in order of path_as_lanes
         
+        self.base_speed = 10.0 # meters/second
         self.speed_limit = 10.0 # meters/second
-        self.lookahead_distance = self.speed_limit * 2 # meters
-        self.stop_distance = self.speed_limit * 4 # meters
+        self.lookahead_distance = self.base_speed * 2 # meters
+        self.stop_distance = self.base_speed * 4 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
         
+        self.isCurveFinished = False
+        self.isCurveStarted = False
         self.densify_interval = 2.0 # meters
         
         self.dest_lanelet = "lanelet192"
@@ -316,15 +319,49 @@ class Planning(Node):
         current_closest_point_to_vehicle = distances_to_vehicle.index(min(distances_to_vehicle))
         return current_closest_point_to_vehicle
 
-
-    def adjust_speed(self, curves, look_ahead_point):
-        if look_ahead_point in curves:
-            print("debug curve - curve found at: ", self.path.index(look_ahead_point))
-            
-
-
     def update_lookahead_distance(self, curves):
         pass
+
+    def adjust_speed(self, curves, curve_angle, curve_coordinates):
+        min_angle = min(curves.keys())
+        max_angle = max(curves.keys())
+        min_speed = float(math.floor(self.base_speed / 3.0))
+        speed = self.base_speed
+        
+        if curve_angle < min_angle:
+            speed = self.base_speed
+        elif curve_angle >= max_angle:
+            speed = min_speed
+        else:
+            speed = self.base_speed - 5
+        
+        return speed
+            
+    def curve_detector(self, curves, look_ahead_point, look_ahead_point_index):
+        
+        curve_finish_point = {}
+        for k, v in curves.items():
+                if look_ahead_point == v:
+                    self.isCurveDetected = True
+                    self.isCurveStarted = False
+                    self.isCurveFinished = False
+        if self.isCurveDetected == True:
+            if self.isCurveStarted == False and self.isCurveFinished == False:
+                self.isCurveStarted = True
+                curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval)]
+                self.speed_limit = self.adjust_speed(curves, k, v)
+                return "Turn"
+            elif self.isCurveStarted == True and self.isCurveFinished == False:
+                vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
+                if self.calculate_distance(vehicle_pose, curve_finish_point) <= self.densify_interval:
+                    self.isCurveFinished = True
+                    return "Cruise"
+                return "Turn"
+            else:
+                self.isCurveStarted = False
+                self.isCurveFinished = False
+                return "Cruise"
+
 
 
     def local_planning(self):
@@ -339,21 +376,24 @@ class Planning(Node):
         return look_ahead_point_index, look_ahead_point
     
 
-    def behavioural_planning(self, look_ahead_point):
+    def behavioural_planning(self, look_ahead_point, look_ahead_point_index):
         
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
 
-        curve_detector = CurveDetector(self.path, angle_threshold=3)
-        curves = curve_detector.detect_curves()
-        self.speed_limit = self.adjust_speed(curves, look_ahead_point)
+        path_curve_detector = PathCurveDetector(self.path, angle_threshold=3)
+        curves = path_curve_detector.find_curves_in_path()
+        _status = self.curve_detector(curves, look_ahead_point, look_ahead_point_index)
 
         if dist_to_final_waypoint <= self.stop_distance:
             self.status.data ='Decelerate'
         elif dist_to_final_waypoint <= 2.0:
             self.status.data = 'PrepareToStop'
         else:
-            self.status.data = 'Cruise'
+            if _status == "Turn":
+                self.status.data = 'Turn'
+            else:
+                self.status.data = 'Cruise'
            
 
     def mission_planning(self):
@@ -383,7 +423,7 @@ class Planning(Node):
             
             look_ahead_point_index, look_ahead_point = self.local_planning()
 
-            self.behavioural_planning(look_ahead_point)
+            self.behavioural_planning(look_ahead_point, look_ahead_point_index)
     
             # publishing
             lookahead_point = LookAheadMsg()
