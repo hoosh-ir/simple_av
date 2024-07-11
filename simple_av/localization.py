@@ -345,7 +345,7 @@ def main(args=None):
     node = Localization()
     try:
         while rclpy.ok():
-            rclpy.spin_once(node, timeout_sec=0.01)  # Set timeout to 0 to avoid delay
+            rclpy.spin(node)  # Set timeout to 0 to avoid delay
             node.localization()
     finally:
         node.destroy_node()

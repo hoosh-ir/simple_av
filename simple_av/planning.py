@@ -341,13 +341,14 @@ class Planning(Node):
     def curve_detector(self, curves, look_ahead_point, look_ahead_point_index):
         curve_finish_point = {}
         curve_angle = 0.0
-        for k, v in curves.items():
-                if look_ahead_point == v:
-                    print("debug - curve found")
-                    curve_angle = k
-                    self.isCurveDetected = True
-                    self.isCurveStarted = False
-                    self.isCurveFinished = False
+        for curve in curves:
+            for k, v in curve.items():
+                    if look_ahead_point == v:
+                        print("debug - curve found")
+                        curve_angle = k
+                        self.isCurveDetected = True
+                        self.isCurveStarted = False
+                        self.isCurveFinished = False
         if self.isCurveDetected == True:
             if self.isCurveStarted == False and self.isCurveFinished == False:
                 self.isCurveStarted = True
@@ -396,9 +397,6 @@ class Planning(Node):
 
         path_curve_detector = PathCurveDetector(self.path, angle_threshold=3)
         curves = path_curve_detector.find_curves_in_path()
-
-        print(curves)
-        return
         
         _status = self.adjust_speed(curves, look_ahead_point, look_ahead_point_index)
 
@@ -441,7 +439,7 @@ class Planning(Node):
             look_ahead_point_index, look_ahead_point = self.local_planning()
 
             self.behavioural_planning(look_ahead_point, look_ahead_point_index)
-            return
+            
             # publishing
             lookahead_point = LookAheadMsg()
             lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
@@ -458,7 +456,7 @@ def main(args=None):
     node = Planning()
     try:
         while rclpy.ok():
-            rclpy.spin_once(node, timeout_sec=0.01)  # Set timeout to 0 to avoid delay
+            rclpy.spin(node)  # Set timeout to 0 to avoid delay
             node.planning()
     finally:
         node.destroy_node()
