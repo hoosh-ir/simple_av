@@ -152,7 +152,7 @@ class VehicleControl(Node):
         target_speed = self.lookahead_point.speed_limit
         accel = 0.0
 
-        if self.lookahead_point.status.data == "Cruise":
+        if self.lookahead_point.status.data == "Cruise" or self.lookahead_point.status.data == "Turn":
             target_speed = self.lookahead_point.speed_limit
         elif self.lookahead_point.status.data == "Decelerate":
             distance_to_stop = self.calculate_distance(self.lookahead_point.stop_point, self.pose.pose.position)
@@ -245,7 +245,7 @@ def main(args=None):
 
     while rclpy.ok():
         # rclpy.spin_once(node)
-        rclpy.spin_once(node, timeout_sec=0.01)  # Set timeout to 0 to avoid delay
+        rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
         node.control()
         
     node.destroy_node()
