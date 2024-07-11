@@ -97,6 +97,8 @@ class Planning(Node):
         self.isCurveStarted = False
         self.isCurveDetected = False
         self.densify_interval = 2.0 # meters
+
+        self.curve_finish_point = {}
         
         self.dest_lanelet = "lanelet192"
         # dest_lanelet = "lanelet319"
@@ -323,7 +325,7 @@ class Planning(Node):
         return current_closest_point_to_vehicle
 
 
-    def adjust_speed_to_curve(self, curves, curve_angle):
+    def adjust_speed_to_curve(self, curve_angle):
         min_speed = self.base_speed / 3.0
 
         if curve_angle > 0.20:
@@ -335,28 +337,27 @@ class Planning(Node):
 
 
     def curve_detector(self, curves, look_ahead_point, look_ahead_point_index):
-        curve_finish_point = {}
+        
         curve_angle = 0.0
         if look_ahead_point_index >= len(self.path) - 5:
             return "Cruise", 0.0
-        
+        # print("debug 2 curve finish point: ", curve_finish_point)
         if not self.isCurveStarted and not self.isCurveFinished:
             for curve in curves:
-                for k, v in curve.items():
-                    if self.path[look_ahead_point_index - 2] == v or self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v or self.path[look_ahead_point_index+2] == v:
-                        print("debug - curve found")
-                        curve_angle = k
-                        curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval)]
-                        print("debug 0 curve finish point index: ", look_ahead_point_index + int(self.lookahead_distance//self.densify_interval))
-                        print("debug 0 curve finish point: ", curve_finish_point)
-                        self.isCurveStarted = True
-                        self.isCurveDetected = True
-                        return "Turn", curve_angle    
+                k, v = next(iter(curve.items()))
+                if self.path[look_ahead_point_index - 2] == v or self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v or self.path[look_ahead_point_index+2] == v:
+                    print("debug - curve found")
+                    curve_angle = k
+                    self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval)]
+                    print("debug 0 look ahead point: ", look_ahead_point_index )
+                    print("debug 0 curve finish point index: ", look_ahead_point_index + int(self.lookahead_distance//self.densify_interval))
+                    # print("debug 0 curve finish point: ", curve_finish_point)
+                    self.isCurveStarted = True
+                    self.isCurveDetected = True
+                    return "Turn", curve_angle    
         elif self.isCurveStarted and not self.isCurveFinished:
             vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-            print("debug 1 curve finish point index: ", look_ahead_point_index + int(self.lookahead_distance//self.densify_interval))
-            print("debug 1 curve finish point: ", curve_finish_point)
-            if self.calculate_distance(vehicle_pose, curve_finish_point, False) <= self.densify_interval:
+            if self.calculate_distance(vehicle_pose, self.curve_finish_point, False) <= self.densify_interval:
                 self.isCurveFinished = True
                 return "Cruise", 0.0
             return "Turn", curve_angle
@@ -371,7 +372,7 @@ class Planning(Node):
     def adjust_speed(self, curves, look_ahead_point, look_ahead_point_index):
         _status, curve_angle = self.curve_detector(curves, look_ahead_point, look_ahead_point_index)
         if _status == 'Turn':
-            self.speed_limit = self.adjust_speed_to_curve(curves, curve_angle)
+            self.speed_limit = self.adjust_speed_to_curve(curve_angle)
         else:
             self.speed_limit = self.base_speed
         
