@@ -101,7 +101,7 @@ class Planning(Node):
 
         self.curve_finish_point = {}
         
-        self.dest_lanelet = "lanelet223"
+        self.dest_lanelet = "lanelet177"
         # dest_lanelet = "lanelet319"
         # dest_lanelet = "lanelet335"
         
