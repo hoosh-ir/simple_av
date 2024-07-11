@@ -42,7 +42,7 @@ class CurveDetector:
         return math.acos(cos_theta)
 
     def detect_curves(self):
-        curves = []
+        curves = {}
         if len(self.points) < 3:
             return curves
 
@@ -51,7 +51,7 @@ class CurveDetector:
             v2 = self.direction_vector(self.points[i], self.points[i+1])
             angle = self.angle_between_vectors(v1, v2)
             if angle > self.angle_threshold:
-                curves.append(self.points[i])
+                curves[self.points[i]] = angle
 
         return curves
 
@@ -85,11 +85,12 @@ class Planning(Node):
         self.path_as_lanes = None  # List of lanes from start point to destination
         self.path = None  # List of points in order of path_as_lanes
         
-        self.speed_limit = 5.0 # meters/second
+        self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.speed_limit * 2 # meters
         self.stop_distance = self.speed_limit * 4 # meters
-        self.densify_interval = 2.0 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
+        
+        self.densify_interval = 2.0 # meters
         
         self.dest_lanelet = "lanelet192"
         # dest_lanelet = "lanelet319"
@@ -316,8 +317,10 @@ class Planning(Node):
         return current_closest_point_to_vehicle
 
 
-    def update_speed_limit(self, curves):
-        pass
+    def adjust_speed(self, curves, look_ahead_point):
+        if look_ahead_point in curves:
+            print("debug curve - curve found at: ", self.path.index(look_ahead_point))
+            
 
 
     def update_lookahead_distance(self, curves):
@@ -331,19 +334,19 @@ class Planning(Node):
 
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         current_closest_point_to_vehicle = self.find_closest_waypoint_to_vehicle(vehicle_pose)
-        next_point_index, next_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle)
+        look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle)
 
-        return next_point_index, next_point
+        return look_ahead_point_index, look_ahead_point
     
 
-    def behavioural_planning(self):
+    def behavioural_planning(self, look_ahead_point):
         
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
 
         curve_detector = CurveDetector(self.path, angle_threshold=3)
         curves = curve_detector.detect_curves()
-        self.speed_limit = self.update_speed_limit(curves)
+        self.speed_limit = self.adjust_speed(curves, look_ahead_point)
 
         if dist_to_final_waypoint <= self.stop_distance:
             self.status.data ='Decelerate'
@@ -378,18 +381,18 @@ class Planning(Node):
                 print("error - no location or pose input")
                 return None
             
-            next_point_index, next_point = self.local_planning()
+            look_ahead_point_index, look_ahead_point = self.local_planning()
 
-            self.behavioural_planning()
+            self.behavioural_planning(look_ahead_point)
     
             # publishing
             lookahead_point = LookAheadMsg()
-            lookahead_point.look_ahead_point = Point(x=next_point['x'], y=next_point['y'], z=next_point['z'])
+            lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
             lookahead_point.stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
 
-            print("output: ", self.status.data, next_point_index)
+            print("output: ", self.status.data, look_ahead_point_index)
             self.planning_publisher.publish(lookahead_point)
 
 
