@@ -324,16 +324,12 @@ class Planning(Node):
 
 
     def adjust_speed_to_curve(self, curves, curve_angle):
-        min_angle = min(curves.keys())
-        max_angle = max(curves.keys())
-        min_speed = float(math.floor(self.base_speed / 3.0))
-        
-        speed = self.base_speed / 2
+        min_speed = self.base_speed / 3.0
 
-        # if curve_angle > 0.20:
-        #     speed = min_speed
-        # else:
-        #     speed = self.base_speed/2
+        if curve_angle > 0.20:
+            speed = min_speed
+        else:
+            speed = self.base_speed / 2
         
         return speed
 
@@ -341,30 +337,34 @@ class Planning(Node):
     def curve_detector(self, curves, look_ahead_point, look_ahead_point_index):
         curve_finish_point = {}
         curve_angle = 0.0
-        for curve in curves:
-            for k, v in curve.items():
-                    if look_ahead_point == v:
+        if look_ahead_point_index >= len(self.path) - 5:
+            return "Cruise", 0.0
+        
+        if not self.isCurveStarted and not self.isCurveFinished:
+            for curve in curves:
+                for k, v in curve.items():
+                    if self.path[look_ahead_point_index - 2] == v or self.path[look_ahead_point_index - 1] == v or self.path[look_ahead_point_index] == v or self.path[look_ahead_point_index+1] == v or self.path[look_ahead_point_index+2] == v:
                         print("debug - curve found")
                         curve_angle = k
+                        curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval)]
+                        print("debug 0 curve finish point index: ", look_ahead_point_index + int(self.lookahead_distance//self.densify_interval))
+                        print("debug 0 curve finish point: ", curve_finish_point)
+                        self.isCurveStarted = True
                         self.isCurveDetected = True
-                        self.isCurveStarted = False
-                        self.isCurveFinished = False
-        if self.isCurveDetected == True:
-            if self.isCurveStarted == False and self.isCurveFinished == False:
-                self.isCurveStarted = True
-                curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval)]
-                return "Turn", curve_angle
-            elif self.isCurveStarted == True and self.isCurveFinished == False:
-                vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-                if self.calculate_distance(vehicle_pose, curve_finish_point, False) <= self.densify_interval:
-                    self.isCurveFinished = True
-                    return "Cruise", 0.0
-                return "Turn", curve_angle
-            else:
-                self.isCurveStarted = False
-                self.isCurveFinished = False
-                self.isCurveDetected = False
+                        return "Turn", curve_angle    
+        elif self.isCurveStarted and not self.isCurveFinished:
+            vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
+            print("debug 1 curve finish point index: ", look_ahead_point_index + int(self.lookahead_distance//self.densify_interval))
+            print("debug 1 curve finish point: ", curve_finish_point)
+            if self.calculate_distance(vehicle_pose, curve_finish_point, False) <= self.densify_interval:
+                self.isCurveFinished = True
                 return "Cruise", 0.0
+            return "Turn", curve_angle
+        else:
+            self.isCurveStarted = False
+            self.isCurveFinished = False
+            self.isCurveDetected = False
+            return "Cruise", 0.0
         return "Cruise", 0.0
 
 
@@ -456,7 +456,7 @@ def main(args=None):
     node = Planning()
     try:
         while rclpy.ok():
-            rclpy.spin(node)  # Set timeout to 0 to avoid delay
+            rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
             node.planning()
     finally:
         node.destroy_node()

@@ -245,7 +245,7 @@ def main(args=None):
 
     while rclpy.ok():
         # rclpy.spin_once(node)
-        rclpy.spin(node)  # Set timeout to 0 to avoid delay
+        rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
         node.control()
         
     node.destroy_node()
