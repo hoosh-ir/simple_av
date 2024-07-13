@@ -101,7 +101,7 @@ class Planning(Node):
 
         self.curve_finish_point = {}
         
-        self.dest_lanelet = "lanelet192"
+        self.dest_lanelet = "lanelet151"
         # dest_lanelet = "lanelet319"
         # dest_lanelet = "lanelet335"
         
@@ -277,10 +277,10 @@ class Planning(Node):
                 if next_lanelet not in visited:
                     visited.add(next_lanelet)
                     queue.append((next_lanelet, path + [next_lanelet]))
-                    for next_adj in self.graph[next_lanelet]['adjacentLanes']:
-                        if next_adj not in visited:
-                            visited.add(next_adj)
-                            queue.append((next_adj, path + [next_adj]))
+                    # for next_adj in self.graph[next_lanelet]['adjacentLanes']:
+                    #     if next_adj not in visited:
+                    #         visited.add(next_adj)
+                    #         queue.append((next_adj, path + [next_adj]))
         
 
     def find_lookahead_point(self, vehicle_pose, current_closest_point_index): 
@@ -357,7 +357,7 @@ class Planning(Node):
                     return "Turn", curve_angle    
         elif self.isCurveStarted and not self.isCurveFinished:
             vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-            if self.calculate_distance(vehicle_pose, self.curve_finish_point, False) <= self.densify_interval * 2:
+            if self.calculate_distance(vehicle_pose, self.curve_finish_point, False) <= self.densify_interval:
                 self.isCurveFinished = True
                 return "Cruise", 0.0
             return "Turn", curve_angle
@@ -409,7 +409,7 @@ class Planning(Node):
 
         if dist_to_final_waypoint <= self.stop_distance:
             self.status.data ='Decelerate'
-        elif dist_to_final_waypoint <= 2.0:
+        elif dist_to_final_waypoint <= self.densify_interval:
             self.status.data = 'PrepareToStop'
         else:
             if _status == "Turn":

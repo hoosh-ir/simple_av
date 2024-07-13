@@ -171,14 +171,20 @@ class VehicleControl(Node):
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
         longitudinal_command.acceleration = accel
 
-        self.get_logger().info(
+        if self.lookahead_point.status.data == "Decelerate":
+            self.get_logger().info(
             f'speed: {current_speed} :\n'
             f'target speed: {target_speed} :\n'
-            # f'accel : {accel}\n'
             f'stop distance: {self.calculate_distance(self.lookahead_point.stop_point, self.pose.pose.position)} :\n'
-            # f'speed_limit : {speed_limit}\n'
             f'status : {self.lookahead_point.status.data}\n'
         )
+        else:
+            self.get_logger().info(
+                f'speed: {current_speed} :\n'
+                f'target speed: {target_speed} :\n'
+                f'status : {self.lookahead_point.status.data}\n'
+            )
+
         return longitudinal_command
     
     def calculate_target_speed_for_stop(self, current_speed, distance_to_stop):
@@ -187,7 +193,7 @@ class VehicleControl(Node):
         else:
             # Gradual deceleration based on distance and current speed
             # Using a nonlinear deceleration curve for smoother braking
-            return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / 20)**0.5)
+            return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / 20)**1.5)
 
 
     def pure_pursuit_steering_angle(self):
