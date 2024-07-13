@@ -160,10 +160,12 @@ class VehicleControl(Node):
         else:
             target_speed = 0.0
 
-        if self.lookahead_point.status.data == "PrepareToStop":
-            accel = 0.0
-        else:
-            accel = self.pid_controller.updatePID(current_speed, target_speed)
+        # if self.lookahead_point.status.data == "PrepareToStop":
+        #     accel = 0.0
+        # else:
+        #     accel = self.pid_controller.updatePID(current_speed, target_speed)
+
+        accel = self.pid_controller.updatePID(current_speed, target_speed)
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
@@ -171,6 +173,7 @@ class VehicleControl(Node):
 
         self.get_logger().info(
             f'speed: {current_speed} :\n'
+            f'target speed: {target_speed} :\n'
             # f'accel : {accel}\n'
             f'stop distance: {self.calculate_distance(self.lookahead_point.stop_point, self.pose.pose.position)} :\n'
             # f'speed_limit : {speed_limit}\n'
@@ -201,10 +204,10 @@ class VehicleControl(Node):
         ld2 = lookahead_x ** 2 + lookahead_y ** 2
         steering_angle = math.atan2(2.0 * local_y * self.wheel_base, ld2)
         
-        self.get_logger().info(
-            f'steering_angle: {steering_angle} :\n'
-            f'yaw: {yaw} :\n'
-        )
+        # self.get_logger().info(
+        #     f'steering_angle: {steering_angle} :\n'
+        #     f'yaw: {yaw} :\n'
+        # )
 
         return steering_angle
     
@@ -243,11 +246,14 @@ def main(args=None):
     rclpy.init(args=args)
     node = VehicleControl()
 
-    while rclpy.ok():
-        # rclpy.spin_once(node)
-        rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
-        node.control()
-        
+    try:
+        while rclpy.ok():
+            # rclpy.spin_once(node)
+            rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
+            node.control()   
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
     node.destroy_node()
     rclpy.shutdown()
 

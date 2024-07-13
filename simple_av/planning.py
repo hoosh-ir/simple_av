@@ -101,7 +101,7 @@ class Planning(Node):
 
         self.curve_finish_point = {}
         
-        self.dest_lanelet = "lanelet177"
+        self.dest_lanelet = "lanelet178"
         # dest_lanelet = "lanelet319"
         # dest_lanelet = "lanelet335"
         
@@ -354,22 +354,19 @@ class Planning(Node):
                     print("debug - curve found")
                     curve_angle = k
                     self.curve_finish_point = self.path[look_ahead_point_index + int(self.lookahead_distance//self.densify_interval)]
-                    print("debug 0 look ahead point: ", look_ahead_point_index )
-                    print("debug 0 curve finish point index: ", look_ahead_point_index + int(self.lookahead_distance//self.densify_interval))
-                    # print("debug 0 curve finish point: ", curve_finish_point)
                     self.isCurveStarted = True
-                    self.isCurveDetected = True
+                    # self.isCurveDetected = True
                     return "Turn", curve_angle    
         elif self.isCurveStarted and not self.isCurveFinished:
             vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-            if self.calculate_distance(vehicle_pose, self.curve_finish_point, False) <= self.densify_interval:
+            if self.calculate_distance(vehicle_pose, self.curve_finish_point, False) <= self.densify_interval * 2:
                 self.isCurveFinished = True
                 return "Cruise", 0.0
             return "Turn", curve_angle
         else:
             self.isCurveStarted = False
             self.isCurveFinished = False
-            self.isCurveDetected = False
+            # self.isCurveDetected = False
             return "Cruise", 0.0
         return "Cruise", 0.0
 
@@ -388,20 +385,26 @@ class Planning(Node):
         """
         Perform local path planning to determine the next point for the vehicle.
         """
-
+        print("local planning ... ")
+        if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
+            return None, None
+        
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         current_closest_point_to_vehicle = self.find_closest_waypoint_to_vehicle(vehicle_pose)
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle)
-
+        print("vehicle pose: ", vehicle_pose)
+        print("current_closest_point_to_vehicle: ", current_closest_point_to_vehicle)
+        print("look_ahead_point_index: ", look_ahead_point_index)
         return look_ahead_point_index, look_ahead_point
     
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index):
         
+        print("behavioural planning ... ")
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
         dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
 
-        path_curve_detector = PathCurveDetector(self.path, angle_threshold=3)
+        path_curve_detector = PathCurveDetector(self.path, angle_threshold=4)
         curves = path_curve_detector.find_curves_in_path()
         
         _status = self.adjust_speed(curves, look_ahead_point, look_ahead_point_index)
@@ -428,7 +431,7 @@ class Planning(Node):
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
-                print("path of lanes: ", self.path)
+                # print("path of lanes: ", self.path)
 
   
     def planning(self):
@@ -436,13 +439,17 @@ class Planning(Node):
         Main planning function to decide between global and local planning.
         """
         if not self.isPathPlanned:
+            print("path planning ... ")
             self.mission_planning()  # generates the path and dencifies it.
         else:
+            
             if not self.location and not self.pose:
                 print("error - no location or pose input")
                 return None
             
             look_ahead_point_index, look_ahead_point = self.local_planning()
+            if not look_ahead_point and not look_ahead_point_index:
+                return
 
             self.behavioural_planning(look_ahead_point, look_ahead_point_index)
             
