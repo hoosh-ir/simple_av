@@ -79,6 +79,7 @@ class Planning(Node):
         self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
 
         # Initialize the publisher
+        ## TODO: rename the lookahead_point topic to planned_route
         self.planning_publisher = self.create_publisher(LookAheadMsg, 'simple_av/planning/lookahead_point', 10)
 
         self.pose = PoseStamped()  # Initialize pose
