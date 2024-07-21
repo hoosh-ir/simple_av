@@ -191,8 +191,7 @@ class VehicleControl(Node):
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         # Gradual deceleration based on distance and current speed
         # Using a nonlinear deceleration curve for smoother braking
-        print(f'current_speed = {current_speed}, result = {current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.8}')
-        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.8)
+        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.25)
 
 
     def pure_pursuit_steering_angle(self):
@@ -209,10 +208,9 @@ class VehicleControl(Node):
         ld2 = lookahead_x ** 2 + lookahead_y ** 2
         steering_angle = math.atan2(2.0 * local_y * self.wheel_base, ld2)
         
-        # self.get_logger().info(
-        #     f'steering_angle: {steering_angle} :\n'
-        #     f'yaw: {yaw} :\n'
-        # )
+        self.get_logger().info(
+            f'steering_angle: {steering_angle}, yaw = {yaw}:\n'
+        )
 
         return steering_angle
     
