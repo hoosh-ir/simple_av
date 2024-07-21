@@ -172,19 +172,19 @@ class VehicleControl(Node):
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
         longitudinal_command.acceleration = accel
 
-        if self.lookAhead.status.data == "Decelerate":
-            self.get_logger().info(
-            f'speed: {current_speed}\n'
-            f'target speed: {target_speed}\n'
-            f'stop distance: {self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)}\n'
-            f'status : {self.lookAhead.status.data}\n'
-        )
-        else:
-            self.get_logger().info(
-                f'speed: {current_speed}\n'
-                f'target speed: {target_speed}\n'
-                f'status : {self.lookAhead.status.data}\n'
-            )
+        # if self.lookAhead.status.data == "Decelerate":
+        #     self.get_logger().info(
+        #     f'speed: {current_speed}\n'
+        #     f'target speed: {target_speed}\n'
+        #     f'stop distance: {self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)}\n'
+        #     f'status : {self.lookAhead.status.data}\n'
+        # )
+        # else:
+        #     self.get_logger().info(
+        #         f'speed: {current_speed}\n'
+        #         f'target speed: {target_speed}\n'
+        #         f'status : {self.lookAhead.status.data}\n'
+        #     )
 
         return longitudinal_command
     
