@@ -100,6 +100,9 @@ class VehicleControl(Node):
         self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125)
         self.wheel_base = 2.75 # meters
 
+        self.previous_steering_angle = 0
+        self.steering_gain = 0.5  # Proportional gain for steering
+
         self.steer_values = []
 
     def pose_callback(self, msg):
@@ -195,8 +198,10 @@ class VehicleControl(Node):
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         # Gradual deceleration based on distance and current speed
         # Using a nonlinear deceleration curve for smoother braking
-        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.15)
+        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.1)
 
+    def filter(self, new_value, previous_value, gain):
+        return gain * previous_value + (1 - gain) * new_value
 
     def pure_pursuit_steering_angle(self):
         # print("coordinates: ",  self.lookAhead.look_ahead_point.x, self.lookAhead.look_ahead_point.y, self.lookAhead.look_ahead_point.z)
@@ -211,6 +216,9 @@ class VehicleControl(Node):
 
         ld2 = lookahead_x ** 2 + lookahead_y ** 2
         steering_angle = math.atan2(2.0 * local_y * self.wheel_base, ld2)
+        steering_angle = self.filter(steering_angle, self.previous_steering_angle, self.steering_gain)
+        self.previous_steering_angle = steering_angle
+
         if steering_angle >= 0:
             self.get_logger().info("Left")
         else:

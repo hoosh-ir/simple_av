@@ -105,7 +105,7 @@ class Planning(Node):
 
         self.curve_finish_point = {}
         
-        self.dest_lanelet = "lanelet177"
+        self.dest_lanelet = "lanelet178"
         
     
     def load_map_data(self):
