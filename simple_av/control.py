@@ -193,7 +193,7 @@ class VehicleControl(Node):
         else:
             # Gradual deceleration based on distance and current speed
             # Using a nonlinear deceleration curve for smoother braking
-            return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / 20)**1.5)
+            return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / 20)**1)
 
 
     def pure_pursuit_steering_angle(self):
