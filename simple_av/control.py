@@ -174,15 +174,15 @@ class VehicleControl(Node):
 
         if self.lookAhead.status.data == "Decelerate":
             self.get_logger().info(
-            f'speed: {current_speed} :\n'
-            f'target speed: {target_speed} :\n'
-            f'stop distance: {self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)} :\n'
+            f'speed: {current_speed}\n'
+            f'target speed: {target_speed}\n'
+            f'stop distance: {self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)}\n'
             f'status : {self.lookAhead.status.data}\n'
         )
         else:
             self.get_logger().info(
-                f'speed: {current_speed} :\n'
-                f'target speed: {target_speed} :\n'
+                f'speed: {current_speed}\n'
+                f'target speed: {target_speed}\n'
                 f'status : {self.lookAhead.status.data}\n'
             )
 
