@@ -191,7 +191,7 @@ class VehicleControl(Node):
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         # Gradual deceleration based on distance and current speed
         # Using a nonlinear deceleration curve for smoother braking
-        print(f'current_speed = {current_speed}, result = {current_speed * (distance_to_stop / self.lookAhead.speed_limit * 4)**0.75}')
+        print(f'current_speed = {current_speed}, result = {current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.8}')
         return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / self.lookAhead.speed_limit * 4)**0.8)
 
 
