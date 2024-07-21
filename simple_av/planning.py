@@ -334,7 +334,7 @@ class Planning(Node):
     def adjust_speed_to_curve(self, curve_angle):
         min_speed = self.base_speed / 3.0
 
-        if curve_angle > 0.20:
+        if curve_angle > 0.15:
             return min_speed
         else:
             return self.base_speed / 2
@@ -408,15 +408,14 @@ class Planning(Node):
         
         _status = self.adjust_speed(curves, look_ahead_point, look_ahead_point_index)
 
-        if dist_to_final_waypoint <= self.stop_distance:
+        if dist_to_final_waypoint <= self.densify_interval:
+            self.status.data = 'Park'
+        elif dist_to_final_waypoint <= self.stop_distance:
             self.status.data ='Decelerate'
-        elif dist_to_final_waypoint <= self.densify_interval:
-            self.status.data = 'PrepareToStop'
+        elif _status == "Turn":
+            self.status.data = 'Turn'
         else:
-            if _status == "Turn":
-                self.status.data = 'Turn'
-            else:
-                self.status.data = 'Cruise'
+            self.status.data = 'Cruise'
            
 
     def mission_planning(self):
