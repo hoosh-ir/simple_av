@@ -100,6 +100,9 @@ class Planning(Node):
         self.isCurveDetected = False
         self.densify_interval = 2.0 # meters
 
+        self.prev_closest_point_to_vehicle_index = 0
+        self.IsFirstLoop = True
+
         self.curve_finish_point = {}
         
         self.dest_lanelet = "lanelet177"
@@ -387,11 +390,23 @@ class Planning(Node):
             return None, None
         
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        current_closest_point_to_vehicle = self.find_closest_waypoint_to_vehicle(vehicle_pose)
+        closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose)
+        
+        current_closest_point_to_vehicle = closest_point_to_vehicle_index
+        
+        if self.IsFirstLoop:
+            self.prev_closest_point_to_vehicle_index = closest_point_to_vehicle_index
+            self.IsFirstLoop = False
+        
+        if closest_point_to_vehicle_index > self.prev_closest_point_to_vehicle_index + self.lookahead_distance / self.densify_interval + 5:
+            print("debuuuug", closest_point_to_vehicle_index, self.prev_closest_point_to_vehicle_index)
+            current_closest_point_to_vehicle = self.prev_closest_point_to_vehicle_index
+            self.prev_closest_point_to_vehicle_index = current_closest_point_to_vehicle
+        else:
+            self.prev_closest_point_to_vehicle_index = closest_point_to_vehicle_index
+        
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle)
-        # print("vehicle pose: ", vehicle_pose)
-        # print("current_closest_point_to_vehicle: ", current_closest_point_to_vehicle)
-        # print("look_ahead_point_index: ", look_ahead_point_index)
+        
         return look_ahead_point_index, look_ahead_point
     
 
