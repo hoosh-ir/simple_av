@@ -408,7 +408,7 @@ class Planning(Node):
 
         if dist_to_final_waypoint <= self.densify_interval:
             self.status.data = 'Park'
-        elif dist_to_final_waypoint <= self.stop_distance:
+        elif dist_to_final_waypoint <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'
         elif _status == "Turn":
             self.status.data = 'Turn'
@@ -456,7 +456,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
 
-            print("output: ", self.status.data, look_ahead_point_index, self.speed_limit)
+            print("output: ", self.status.data, look_ahead_point_index, len(self.path), self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
 
 
