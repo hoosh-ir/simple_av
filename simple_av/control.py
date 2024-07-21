@@ -142,6 +142,7 @@ class VehicleControl(Node):
         lateral_command = AckermannLateralCommand()
         distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
         if status == "Park" or (status == "Decelerate" and distance_to_stop < 5.0):
+            print("debug PARK")
             lateral_command.steering_tire_angle = 0.0
             lateral_command.steering_tire_rotation_rate = 0.0
         else:
@@ -189,7 +190,7 @@ class VehicleControl(Node):
     def calculate_target_speed_for_stop(self, current_speed, distance_to_stop):
         # Gradual deceleration based on distance and current speed
         # Using a nonlinear deceleration curve for smoother braking
-        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / self.lookAhead.speed_limit * 2)**1)
+        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / self.lookAhead.speed_limit * 4)**0.75)
 
 
     def pure_pursuit_steering_angle(self):
