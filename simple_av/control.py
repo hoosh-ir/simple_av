@@ -31,7 +31,7 @@ class PIDController:
         self.previous_error = 0.0
     
     def updatePID(self, observed_vel, target_vel):
-        print("debug 3: ", target_vel, observed_vel)
+        print("debug speed: ", target_vel, observed_vel)
         error = target_vel - observed_vel
         self.current_time = time.time()
         delta_time = self.current_time - self.last_time
@@ -173,16 +173,16 @@ class VehicleControl(Node):
 
         if self.lookahead_point.status.data == "Decelerate":
             self.get_logger().info(
-            f'speed: {current_speed} :\n'
+            # f'speed: {current_speed} :\n'
             f'target speed: {target_speed} :\n'
             f'stop distance: {self.calculate_distance(self.lookahead_point.stop_point, self.pose.pose.position)} :\n'
-            f'status : {self.lookahead_point.status.data}\n'
+            # f'status : {self.lookahead_point.status.data}\n'
         )
         else:
             self.get_logger().info(
-                f'speed: {current_speed} :\n'
+                # f'speed: {current_speed} :\n'
                 f'target speed: {target_speed} :\n'
-                f'status : {self.lookahead_point.status.data}\n'
+                # f'status : {self.lookahead_point.status.data}\n'
             )
 
         return longitudinal_command
@@ -193,7 +193,7 @@ class VehicleControl(Node):
         else:
             # Gradual deceleration based on distance and current speed
             # Using a nonlinear deceleration curve for smoother braking
-            return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / 20)**1)
+            return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / self.lookahead_point.speed_limit * 2)**2)
 
 
     def pure_pursuit_steering_angle(self):
@@ -229,10 +229,10 @@ class VehicleControl(Node):
         alpha = np.arctan2(lookahead_y, lookahead_x) - yaw # vehicle heading angle error
         steering_angle = np.arctan2(2.0 * self.wheel_base * np.sin(alpha) / ld2, 1.0) # given from geometric relationship
 
-        self.get_logger().info(
-            f'steering_angle: {steering_angle} :\n'
-            f'yaw: {yaw} :\n'
-        )
+        # self.get_logger().info(
+        #     f'steering_angle: {steering_angle} :\n'
+        #     f'yaw: {yaw} :\n'
+        # )
 
         return steering_angle
 
