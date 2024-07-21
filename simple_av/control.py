@@ -160,11 +160,6 @@ class VehicleControl(Node):
         else:
             target_speed = 0.0
 
-        # if self.lookahead_point.status.data == "PrepareToStop":
-        #     accel = 0.0
-        # else:
-        #     accel = self.pid_controller.updatePID(current_speed, target_speed)
-
         accel = self.pid_controller.updatePID(current_speed, target_speed)
 
         longitudinal_command = LongitudinalCommand()
