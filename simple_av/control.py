@@ -92,7 +92,7 @@ class VehicleControl(Node):
         self.pose = PoseStamped()
         self.ground_truth = PoseStamped()
         self.velocity_report = VelocityReport()
-        self.lookahead_point = LookAheadMsg()
+        self.lookAhead = LookAheadMsg()
 
         self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
@@ -110,7 +110,7 @@ class VehicleControl(Node):
         self.velocity_report = msg
 
     def lookahead_callback(self, msg):
-        self.lookahead_point = msg
+        self.lookAhead = msg
 
     def get_latest_messages(self):
         return self.pose, self.velocity_report
@@ -120,7 +120,7 @@ class VehicleControl(Node):
 
     def control(self):
 
-        if not self.velocity_report and not self.lookahead_point and not self.pose and not self.ground_truth:
+        if not self.velocity_report and not self.lookAhead and not self.pose and not self.ground_truth:
             return
 
         control_msg = AckermannControlCommand()
@@ -136,7 +136,7 @@ class VehicleControl(Node):
     
     def get_lateral_command(self):
         lateral_command = AckermannLateralCommand()
-        if self.pose and self.lookahead_point and self.ground_truth:
+        if self.pose and self.lookAhead and self.ground_truth:
             steer = self.pure_pursuit_steering_angle()
             lateral_command.steering_tire_angle = steer
             lateral_command.steering_tire_rotation_rate = 0.0
@@ -149,13 +149,13 @@ class VehicleControl(Node):
     def get_longitudinal_command(self):
 
         current_speed = self.velocity_report.longitudinal_velocity if self.velocity_report else 0.0
-        target_speed = self.lookahead_point.speed_limit
+        target_speed = self.lookAhead.speed_limit
         accel = 0.0
 
-        if self.lookahead_point.status.data == "Cruise" or self.lookahead_point.status.data == "Turn":
-            target_speed = self.lookahead_point.speed_limit
-        elif self.lookahead_point.status.data == "Decelerate":
-            distance_to_stop = self.calculate_distance(self.lookahead_point.stop_point, self.pose.pose.position)
+        if self.lookAhead.status.data == "Cruise" or self.lookAhead.status.data == "Turn":
+            target_speed = self.lookAhead.speed_limit
+        elif self.lookAhead.status.data == "Decelerate":
+            distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
         else:
             target_speed = 0.0
@@ -166,18 +166,18 @@ class VehicleControl(Node):
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
         longitudinal_command.acceleration = accel
 
-        if self.lookahead_point.status.data == "Decelerate":
+        if self.lookAhead.status.data == "Decelerate":
             self.get_logger().info(
             # f'speed: {current_speed} :\n'
             f'target speed: {target_speed} :\n'
-            f'stop distance: {self.calculate_distance(self.lookahead_point.stop_point, self.pose.pose.position)} :\n'
-            # f'status : {self.lookahead_point.status.data}\n'
+            f'stop distance: {self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)} :\n'
+            # f'status : {self.lookAhead.status.data}\n'
         )
         else:
             self.get_logger().info(
                 # f'speed: {current_speed} :\n'
                 f'target speed: {target_speed} :\n'
-                # f'status : {self.lookahead_point.status.data}\n'
+                # f'status : {self.lookAhead.status.data}\n'
             )
 
         return longitudinal_command
@@ -188,14 +188,14 @@ class VehicleControl(Node):
         else:
             # Gradual deceleration based on distance and current speed
             # Using a nonlinear deceleration curve for smoother braking
-            return min(self.lookahead_point.speed_limit, current_speed * (distance_to_stop / self.lookahead_point.speed_limit * 2)**2)
+            return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / self.lookAhead.speed_limit * 2)**2)
 
 
     def pure_pursuit_steering_angle(self):
-        # print("coordinates: ",  self.lookahead_point.look_ahead_point.x, self.lookahead_point.look_ahead_point.y, self.lookahead_point.look_ahead_point.z)
+        # print("coordinates: ",  self.lookAhead.look_ahead_point.x, self.lookAhead.look_ahead_point.y, self.lookAhead.look_ahead_point.z)
     
-        lookahead_x =self.lookahead_point.look_ahead_point.x - self.pose.pose.position.x
-        lookahead_y = self.lookahead_point.look_ahead_point.y - self.pose.pose.position.y
+        lookahead_x =self.lookAhead.look_ahead_point.x - self.pose.pose.position.x
+        lookahead_y = self.lookAhead.look_ahead_point.y - self.pose.pose.position.y
 
         yaw = self.get_yaw_from_pose(self.ground_truth)
 
@@ -214,8 +214,8 @@ class VehicleControl(Node):
     
     def pure_pursuit_steering_angle1(self):
 
-        lookahead_x =self.lookahead_point.look_ahead_point.x - self.pose.pose.position.x
-        lookahead_y = self.lookahead_point.look_ahead_point.y - self.pose.pose.position.y
+        lookahead_x =self.lookAhead.look_ahead_point.x - self.pose.pose.position.x
+        lookahead_y = self.lookAhead.look_ahead_point.y - self.pose.pose.position.y
 
         yaw = self.get_yaw_from_pose(self.ground_truth)
         ld2 = lookahead_x ** 2 + lookahead_y ** 2
