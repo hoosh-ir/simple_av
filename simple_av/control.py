@@ -100,6 +100,11 @@ class VehicleControl(Node):
         self.pid_controller = PIDController(p_gain=1.5, i_gain=0.5, d_gain=0.125)
         self.wheel_base = 2.75 # meters
 
+        self.previous_steering_angle = 0
+        self.steering_gain = 0.5  # Proportional gain for steering
+
+        self.steer_values = []
+
     def pose_callback(self, msg):
         self.pose = msg
 
@@ -149,6 +154,8 @@ class VehicleControl(Node):
         else:
             if self.pose and self.lookAhead and self.ground_truth:
                 steer = self.pure_pursuit_steering_angle()
+                if steer >= 1.25 or steer <= -0.67:
+                    self.steer_values.append(steer)
                 lateral_command.steering_tire_angle = steer
                 lateral_command.steering_tire_rotation_rate = 0.0
             else:
@@ -172,27 +179,29 @@ class VehicleControl(Node):
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
         longitudinal_command.acceleration = accel
 
-        # if self.lookAhead.status.data == "Decelerate":
-        #     self.get_logger().info(
-        #     f'speed: {current_speed}\n'
-        #     f'target speed: {target_speed}\n'
-        #     f'stop distance: {self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)}\n'
-        #     f'status : {self.lookAhead.status.data}\n'
-        # )
-        # else:
-        #     self.get_logger().info(
-        #         f'speed: {current_speed}\n'
-        #         f'target speed: {target_speed}\n'
-        #         f'status : {self.lookAhead.status.data}\n'
-        #     )
+        if self.lookAhead.status.data == "Decelerate":
+            self.get_logger().info(
+            f'speed: {current_speed}\n'
+            f'target speed: {target_speed}\n'
+            f'stop distance: {self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)}\n'
+            f'status : {self.lookAhead.status.data}\n'
+        )
+        else:
+            self.get_logger().info(
+                f'speed: {current_speed}\n'
+                f'target speed: {target_speed}\n'
+                f'status : {self.lookAhead.status.data}\n'
+            )
 
         return longitudinal_command
     
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         # Gradual deceleration based on distance and current speed
         # Using a nonlinear deceleration curve for smoother braking
-        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.15)
+        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.1)
 
+    def filter(self, new_value, previous_value, gain):
+        return gain * previous_value + (1 - gain) * new_value
 
     def pure_pursuit_steering_angle(self):
         # print("coordinates: ",  self.lookAhead.look_ahead_point.x, self.lookAhead.look_ahead_point.y, self.lookAhead.look_ahead_point.z)
@@ -207,10 +216,16 @@ class VehicleControl(Node):
 
         ld2 = lookahead_x ** 2 + lookahead_y ** 2
         steering_angle = math.atan2(2.0 * local_y * self.wheel_base, ld2)
-        
-        self.get_logger().info(
-            f'steering_angle: {steering_angle}, yaw = {yaw}:\n'
-        )
+        steering_angle = self.filter(steering_angle, self.previous_steering_angle, self.steering_gain)
+        self.previous_steering_angle = steering_angle
+
+        if steering_angle >= 0:
+            self.get_logger().info("Left")
+        else:
+            self.get_logger().info("Right")
+        # self.get_logger().info(
+        #     f'steering_angle: {steering_angle}, yaw = {yaw}:\n'
+        # )
 
         return steering_angle
     
@@ -247,10 +262,11 @@ def main(args=None):
 
     try:
         while rclpy.ok():
-            # rclpy.spin_once(node)
+            rclpy.spin_once(node)
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
             node.control()   
     finally:
+        # print(node.steer_values)
         node.destroy_node()
         rclpy.shutdown()
     node.destroy_node()
