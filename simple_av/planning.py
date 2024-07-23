@@ -116,7 +116,7 @@ class Planning(Node):
             dict: The map data loaded from the JSON file.
         """
         package_share_directory = get_package_share_directory('simple_av')
-        json_file_path = os.path.join(package_share_directory, 'resource', 'map.json')
+        json_file_path = os.path.join(package_share_directory, 'resource', 'V3_map.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
