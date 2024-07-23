@@ -314,9 +314,6 @@ class Localization(Node):
         else:
             return closest_point, closest_lane_name, min_distance
 
-    def get_vehicle_heading():
-        pass
-
     def localization(self):
         """
         Performs localization by first attempting global positioning, then local positioning.
