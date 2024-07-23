@@ -102,10 +102,11 @@ class Planning(Node):
 
         self.prev_closest_point_to_vehicle_index = 0
         self.IsFirstLoop = True
+        self.localization_closest_point_index = 0
 
         self.curve_finish_point = {}
         
-        self.dest_lanelet = "lanelet178"
+        self.dest_lanelet = "lanelet177"
         
     
     def load_map_data(self):
@@ -458,6 +459,10 @@ class Planning(Node):
                 print("error - no location or pose input")
                 return None
             
+            for i in range(len(self.path)):
+                if self.path[i]['x'] == self.location.closest_point.x and self.path[i]['y'] == self.location.closest_point.y and self.path[i]['z'] == self.location.closest_point.z:
+                    self.localization_closest_point_index = i
+
             look_ahead_point_index, look_ahead_point = self.local_planning()
             if not look_ahead_point and not look_ahead_point_index:
                 return
@@ -471,7 +476,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
 
-            print("output: ", self.status.data, look_ahead_point_index, len(self.path), self.speed_limit)
+            print("output: ", self.status.data, look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
 
 
