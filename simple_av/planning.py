@@ -89,8 +89,8 @@ class Planning(Node):
         self.path_as_lanes = None  # List of lanes from start point to destination
         self.path = None  # List of points in order of path_as_lanes
         
-        self.base_speed = 10.0 # meters/second
-        self.speed_limit = 10.0 # meters/second
+        self.base_speed = 5.0 # meters/second
+        self.speed_limit = 5.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 4 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
@@ -324,16 +324,8 @@ class Planning(Node):
             
         return first_ahead_point, self.path[first_ahead_point]
 
-    def find_closest_waypoint_to_vehicle(self, vehicle_pose):
-        # Finding the index of the closest point in path list
-        distances_to_vehicle = []
-        for p in self.path:
-            distances_to_vehicle.append(self.calculate_distance(p, vehicle_pose))
-        current_closest_point_to_vehicle = distances_to_vehicle.index(min(distances_to_vehicle))
-        return current_closest_point_to_vehicle
-
-
     def adjust_speed_to_curve(self, curve_angle):
+        return self.base_speed
         min_speed = self.base_speed / 3.0
 
         if curve_angle > 0.15:
@@ -380,6 +372,14 @@ class Planning(Node):
             self.speed_limit = self.base_speed
         
         return _status
+
+    def find_closest_waypoint_to_vehicle(self, vehicle_pose):
+        # Finding the index of the closest point in path list
+        distances_to_vehicle = []
+        for p in self.path:
+            distances_to_vehicle.append(self.calculate_distance(p, vehicle_pose))
+        current_closest_point_to_vehicle = distances_to_vehicle.index(min(distances_to_vehicle))
+        return current_closest_point_to_vehicle
 
 
     def local_planning(self):
@@ -475,7 +475,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
 
-            print("output: ", self.status.data, look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
+            print("output: ", self.status.data, self.location.closest_lane_names.data, look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
 
 
