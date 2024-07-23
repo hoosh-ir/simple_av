@@ -106,7 +106,7 @@ class Planning(Node):
 
         self.curve_finish_point = {}
         
-        self.dest_lanelet = "lanelet177"
+        self.dest_lanelet = "lanelet264"
         
     
     def load_map_data(self):
@@ -454,7 +454,6 @@ class Planning(Node):
             print("path planning ... ")
             self.mission_planning()  # generates the path and dencifies it.
         else:
-            
             if not self.location and not self.pose:
                 print("error - no location or pose input")
                 return None
