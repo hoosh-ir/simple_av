@@ -171,6 +171,7 @@ class Localization(Node):
                     if lane['name'] == lane_name:
                         lanes_to_visit.extend([(next_lane, depth + 1) for next_lane in lane.get('nextLanes', [])])
                         lanes_to_visit.extend([(prev_lane, depth + 1) for prev_lane in lane.get('prevLanes', [])])
+                        lanes_to_visit.extend([(adjacent_lane, depth + 1) for adjacent_lane in lane.get('adjacentLanes', [])])
         search_areas.append(list(search_area))
         
         unique_elements = set()  # Using a set to store unique elements
