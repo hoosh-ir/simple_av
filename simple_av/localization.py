@@ -64,7 +64,7 @@ class Localization(Node):
         self.ground_truth_msg = PoseStamped()
         self.imu_msg = Imu()
         self.isGlobalPositioningDone = False
-        self.local_positioning_depth_search = 2
+        self.local_positioning_depth_search = 1
 
         # Initialize instance variables for storing closest point and lanes
         self.closest_point = None
