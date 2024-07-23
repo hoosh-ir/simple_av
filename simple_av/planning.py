@@ -244,12 +244,12 @@ class Planning(Node):
         points = []
         for lane_name in self.path_as_lanes:
             lane_obj = self.find_lane_by_name(lane_name)
-            waypoints = lane_obj['waypoints']
+            waypoints = lane_obj['dense_waypoints']
             for waypoint in waypoints:
                 points.append(waypoint)
 
         # Densify path of points
-        points = self.densify_waypoints(points)
+        # points = self.densify_waypoints(points)
 
         # Remove duplicate points
         self.path = [points[i] for i in range(len(points)) if i == 0 or (points[i]['x'] != points[i - 1]['x'] or points[i]['y'] != points[i - 1]['y'] or points[i]['z'] != points[i - 1]['z'])]
