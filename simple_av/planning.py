@@ -106,10 +106,11 @@ class Planning(Node):
         self.localization_closest_point_index = 0
         self.initial_lane = None
         self.search_area_first_lane_index = 0
+        self.search_depth = 3
 
         self.curve_finish_point = {}
         
-        self.dest_lanelet = "lanelet264"
+        self.dest_lanelet = "lanelet177"
         
     
     def load_map_data(self):
@@ -374,16 +375,20 @@ class Planning(Node):
             self.speed_limit = self.base_speed
         
         return _status
-
-    def find_closest_waypoint_to_vehicle(self, vehicle_pose, search_area_as_lanes):
-        # Finding the index of the closest point in path list
+    
+    def create_search_area(self, search_area_as_lanes):
+        # convert lanes in the search are into a list of waypoints
         search_area = []
         for lane in search_area_as_lanes:
             lane_obj = self.find_lane_by_name(lane)
             waypoints = lane_obj['dense_waypoints']
             for waypoint in waypoints:
                 search_area.append(waypoint)
-        print("debug - search area as lanes", search_area_as_lanes, "size of search area: ", len(search_area))
+        # print("debug - search area as lanes", search_area_as_lanes, "size of search area: ", len(search_area))
+        return search_area
+
+    def find_closest_waypoint_to_vehicle(self, vehicle_pose, search_area):
+        # Finding the index of the closest point in search area
 
         distances_to_vehicle = []
         for waypoint in search_area:
@@ -412,7 +417,8 @@ class Planning(Node):
             self.search_area_first_lane_index = self.path_as_lanes.index(self.location.closest_lane_names.data)
         
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, self.path_as_lanes[self.search_area_first_lane_index: self.search_area_first_lane_index + 3])
+        search_area = self.create_search_area(self.path_as_lanes[self.search_area_first_lane_index: self.search_area_first_lane_index + self.search_depth])
+        closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
         
         current_closest_point_to_vehicle = closest_point_to_vehicle_index
         
