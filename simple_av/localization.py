@@ -211,10 +211,10 @@ class Localization(Node):
             if search_lanes:
                 lane_name = lane
                 lanelet_obj = self.get_lane(lane)
-                waypoints = lanelet_obj['waypoints']
+                waypoints = lanelet_obj['dense_waypoints']
             else:
                 lane_name = lane['name']
-                waypoints = lane['waypoints']
+                waypoints = lane['dense_waypoints']
 
             for waypoint in waypoints:
                 x = waypoint['x']
