@@ -101,7 +101,7 @@ class VehicleControl(Node):
         self.wheel_base = 2.75 # meters
 
         self.previous_steering_angle = 0
-        self.steering_gain = 0.5  # Proportional gain for steering
+        self.steering_gain = 0.2  # Proportional gain for steering
 
         self.steer_values = []
 
