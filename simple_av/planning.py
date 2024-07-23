@@ -88,9 +88,10 @@ class Planning(Node):
         self.isPathPlanned = False  # Flag to check if the path has been planned
         self.path_as_lanes = None  # List of lanes from start point to destination
         self.path = None  # List of points in order of path_as_lanes
+        self.route = None 
         
-        self.base_speed = 5.0 # meters/second
-        self.speed_limit = 5.0 # meters/second
+        self.base_speed = 10.0 # meters/second
+        self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 4 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
@@ -103,6 +104,8 @@ class Planning(Node):
         self.prev_closest_point_to_vehicle_index = 0
         self.IsFirstLoop = True
         self.localization_closest_point_index = 0
+        self.initial_lane = None
+        self.search_area_first_lane_index = 0
 
         self.curve_finish_point = {}
         
@@ -298,7 +301,7 @@ class Planning(Node):
         """
 
         if current_closest_point_index == len(self.path) - 1:
-            print("debug 1 - shiit: ", len(self.path))
+            print("debug shiit: ", len(self.path))
             return current_closest_point_index, self.path[current_closest_point_index]
             
         # Calculate direction vectors
@@ -363,7 +366,6 @@ class Planning(Node):
             return "Cruise", 0.0
         return "Cruise", 0.0
 
-
     def adjust_speed(self, curves, look_ahead_point, look_ahead_point_index):
         _status, curve_angle = self.curve_detector(curves, look_ahead_point, look_ahead_point_index)
         if _status == 'Turn':
@@ -373,12 +375,21 @@ class Planning(Node):
         
         return _status
 
-    def find_closest_waypoint_to_vehicle(self, vehicle_pose):
+    def find_closest_waypoint_to_vehicle(self, vehicle_pose, search_area_as_lanes):
         # Finding the index of the closest point in path list
+        search_area = []
+        for lane in search_area_as_lanes:
+            lane_obj = self.find_lane_by_name(lane)
+            waypoints = lane_obj['dense_waypoints']
+            for waypoint in waypoints:
+                search_area.append(waypoint)
+        print("debug - search area as lanes", search_area_as_lanes, "size of search area: ", len(search_area))
+
         distances_to_vehicle = []
-        for p in self.path:
-            distances_to_vehicle.append(self.calculate_distance(p, vehicle_pose))
-        current_closest_point_to_vehicle = distances_to_vehicle.index(min(distances_to_vehicle))
+        for waypoint in search_area:
+            distances_to_vehicle.append(self.calculate_distance(waypoint, vehicle_pose))
+        closest_waypoint_to_vehicle = search_area[distances_to_vehicle.index(min(distances_to_vehicle))]
+        current_closest_point_to_vehicle = self.path.index(closest_waypoint_to_vehicle)
         return current_closest_point_to_vehicle
 
 
@@ -388,10 +399,20 @@ class Planning(Node):
         """
         # print("local planning ... ")
         if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
+            self.get_logger().warning("Vehicle Pose is not accessible")
             return None, None
         
+        if self.initial_lane != self.path_as_lanes[0]:
+            self.get_logger().error("The start lane from localization Node is not the first lane in path")
+            return None, None
+
+        if self.location.closest_lane_names.data not in self.path_as_lanes:
+            self.get_logger().warning("Vehicle is out of the Path")
+        else:
+            self.search_area_first_lane_index = self.path_as_lanes.index(self.location.closest_lane_names.data)
+        
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose)
+        closest_point_to_vehicle_index = self.find_closest_waypoint_to_vehicle(vehicle_pose, self.path_as_lanes[self.search_area_first_lane_index: self.search_area_first_lane_index + 3])
         
         current_closest_point_to_vehicle = closest_point_to_vehicle_index
         
@@ -443,6 +464,8 @@ class Planning(Node):
             if self.path and self.path_as_lanes:
                 self.isPathPlanned = True
                 print("path of lanes: ", self.path_as_lanes)
+                self.initial_lane = self.location.closest_lane_names.data
+                self.route = self.path_as_lanes[:]
                 # print("path of lanes: ", self.path)
 
   
