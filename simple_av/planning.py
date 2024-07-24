@@ -422,16 +422,16 @@ class Planning(Node):
         
         current_closest_point_to_vehicle = closest_point_to_vehicle_index
         
-        if self.IsFirstLoop:
-            self.prev_closest_point_to_vehicle_index = closest_point_to_vehicle_index
-            self.IsFirstLoop = False
+        # if self.IsFirstLoop:
+        #     self.prev_closest_point_to_vehicle_index = closest_point_to_vehicle_index
+        #     self.IsFirstLoop = False
         
-        if closest_point_to_vehicle_index > self.prev_closest_point_to_vehicle_index + self.lookahead_distance / self.densify_interval + 5:
-            print("debuuuug", closest_point_to_vehicle_index, self.prev_closest_point_to_vehicle_index)
-            current_closest_point_to_vehicle = self.prev_closest_point_to_vehicle_index
-            self.prev_closest_point_to_vehicle_index = current_closest_point_to_vehicle
-        else:
-            self.prev_closest_point_to_vehicle_index = closest_point_to_vehicle_index
+        # if closest_point_to_vehicle_index > self.prev_closest_point_to_vehicle_index + self.lookahead_distance / self.densify_interval + 5:
+        #     print("debuuuug", closest_point_to_vehicle_index, self.prev_closest_point_to_vehicle_index)
+        #     current_closest_point_to_vehicle = self.prev_closest_point_to_vehicle_index
+        #     self.prev_closest_point_to_vehicle_index = current_closest_point_to_vehicle
+        # else:
+        #     self.prev_closest_point_to_vehicle_index = closest_point_to_vehicle_index
         
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle)
         
