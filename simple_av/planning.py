@@ -9,6 +9,7 @@ import math
 from collections import deque
 from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import LookAheadMsg
+from v2x_msgs.msg import CooperativeSignalsMessage
 import numpy as np
 
 
@@ -72,6 +73,9 @@ class Planning(Node):
             'adjacentLanes': lanelet.get('adjacentLanes', []),
         } for lanelet in self.map_data}
 
+        # Create subscriber to /v2x/traffic_signals1  topic
+        self.subscriptionPose = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals1', self.trafficSignal_callback, 10)
+
         # Create subscriber to /sensing/gnss/pose topic
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
 
@@ -84,6 +88,7 @@ class Planning(Node):
 
         self.pose = PoseStamped()  # Initialize pose
         self.location = LocalizationMsg()  # Initialize location
+        self.trafficSignal = CooperativeSignalsMessage() # Initialize traffic signal
 
         self.isPathPlanned = False  # Flag to check if the path has been planned
         self.path_as_lanes = None  # List of lanes from start point to destination
@@ -109,7 +114,7 @@ class Planning(Node):
 
         self.curve_finish_point = None
         
-        self.dest_lanelet = "lanelet520"
+        self.dest_lanelet = "lanelet69"
         
     
     def load_map_data(self):
@@ -124,6 +129,14 @@ class Planning(Node):
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
             return map_data
+        
+    def trafficSignal_callback(self, msg):
+        """
+        Callback function to update the pose data.
+        Args:
+            msg (PoseStamped): The pose message received from the topic.
+        """
+        self.trafficSignal = msg
 
     def pose_callback(self, msg):
         """
@@ -440,6 +453,22 @@ class Planning(Node):
             
         return look_ahead_point_index, look_ahead_point
     
+    def get_trafficSignal(self):
+        if self.trafficSignal:
+            signals = self.trafficSignal.traffic_signals.signals
+            
+            for signal in signals:
+                map_primitive_id = signal.map_primitive_id
+                # Each signal has a list of lights
+                for light in signal.lights:
+                    color = light.color
+                    print(f"Map Primitive ID: {map_primitive_id}, Color: {color}")
+            
+            return map_primitive_id, color
+    
+    def manage_traffic_lights(self):
+        map_primitive_id, color = self.get_trafficSignal()
+
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index):
         
@@ -449,6 +478,8 @@ class Planning(Node):
 
         path_curve_detector = PathCurveDetector(self.path, angle_threshold=3)
         curves = path_curve_detector.find_curves_in_path()
+
+        self.manage_traffic_lights(look_ahead_point, look_ahead_point_index)
         
         _status = self.adjust_speed(curves, look_ahead_point, look_ahead_point_index)
 
@@ -510,6 +541,9 @@ class Planning(Node):
 
             # print("output: ", self.status.data, self.location.closest_lane_names.data, look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
+    
+
+
 
 
 def main(args=None):
