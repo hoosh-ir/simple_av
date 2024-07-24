@@ -393,7 +393,18 @@ class Planning(Node):
         
         return _status
     
-    def create_search_area(self, search_area_as_lanes):
+    def create_search_area(self):
+        
+        try:
+            lane_index = self.route.index(self.location.closest_lane_names.data)
+        except:
+            # vehicle is out of path
+            self.get_logger().warning("Vehicle is out of the Path")
+            lane_index = self.current_route_index
+        if lane_index in range(self.current_route_index, self.current_route_index + self.search_depth):
+            self.current_route_index = lane_index
+        search_area_as_lanes = self.path_as_lanes[self.current_route_index: self.current_route_index + self.search_depth]
+
         # convert lanes in the search are into a list of waypoints
         search_area = []
         for lane in search_area_as_lanes:
@@ -402,7 +413,7 @@ class Planning(Node):
             for waypoint in waypoints:
                 search_area.append(waypoint)
         # print("debug - search area as lanes", search_area_as_lanes, "size of search area: ", len(search_area))
-        return search_area
+        return search_area, search_area_as_lanes
 
     def find_closest_waypoint_to_vehicle(self, vehicle_pose, search_area):
         # Finding the index of the closest point in search area
@@ -415,31 +426,15 @@ class Planning(Node):
         return current_closest_point_to_vehicle
 
 
-    def local_planning(self):
+    def local_planning(self, search_area, search_area_as_lanes):
         """
         Perform local path planning to determine the next point for the vehicle.
         """
-        # print("local planning ... ")
         if self.pose.pose.position.x == 0.0 and self.pose.pose.position.y == 0.0 and self.pose.pose.position.z == 0.0:
             self.get_logger().warning("Vehicle Pose is not accessible")
             return None, None
-        
-        if self.initial_lane != self.path_as_lanes[0]:
-            self.get_logger().error("The start lane from localization Node is not the first lane in path")
-            return None, None
-        
-        try:
-            lane_index = self.route.index(self.location.closest_lane_names.data)
-        except:
-            # vehicle is out of path
-            self.get_logger().warning("Vehicle is out of the Path")
-            lane_index = self.current_route_index
-        
-        if lane_index in range(self.current_route_index, self.current_route_index + self.search_depth):
-            self.current_route_index = lane_index
-        
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        search_area = self.create_search_area(self.path_as_lanes[self.current_route_index: self.current_route_index + self.search_depth])
+        
         current_closest_point_to_vehicle = self.find_closest_waypoint_to_vehicle(vehicle_pose, search_area)
         
         look_ahead_point_index, look_ahead_point = self.find_lookahead_point(vehicle_pose, current_closest_point_to_vehicle, search_area)
@@ -447,30 +442,26 @@ class Planning(Node):
         for i in range(len(self.path[look_ahead_point_index-15:])):
             if self.path[i]['x'] == self.location.closest_point.x and self.path[i]['y'] == self.location.closest_point.y and self.path[i]['z'] == self.location.closest_point.z:
                 self.localization_closest_point_index = i
-    
-        print(f'c lane = {self.location.closest_lane_names.data}, cli = {self.localization_closest_point_index}, lookahead {look_ahead_point_index} li = {lane_index}, ci = {self.current_route_index}, ci on route = {self.route[self.current_route_index]}')
-        
             
         return look_ahead_point_index, look_ahead_point
     
     def get_trafficSignal(self):
         if self.trafficSignal:
             signals = self.trafficSignal.traffic_signals.signals
-            
             for signal in signals:
                 map_primitive_id = signal.map_primitive_id
                 # Each signal has a list of lights
                 for light in signal.lights:
                     color = light.color
-                    print(f"Map Primitive ID: {map_primitive_id}, Color: {color}")
-            
             return map_primitive_id, color
     
-    def manage_traffic_lights(self):
+    def manage_traffic_lights(self, look_ahead_point, look_ahead_point_index, search_area_as_lanes):
         map_primitive_id, color = self.get_trafficSignal()
+        print(f"Map Primitive ID: {map_primitive_id}, Color: {color}")
 
 
-    def behavioural_planning(self, look_ahead_point, look_ahead_point_index):
+
+    def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         
         # print("behavioural planning ... ")
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
@@ -479,7 +470,7 @@ class Planning(Node):
         path_curve_detector = PathCurveDetector(self.path, angle_threshold=3)
         curves = path_curve_detector.find_curves_in_path()
 
-        self.manage_traffic_lights(look_ahead_point, look_ahead_point_index)
+        self.manage_traffic_lights(look_ahead_point, look_ahead_point_index, search_area_as_lanes)
         
         _status = self.adjust_speed(curves, look_ahead_point, look_ahead_point_index)
 
@@ -526,11 +517,16 @@ class Planning(Node):
             #     if self.path[i]['x'] == self.location.closest_point.x and self.path[i]['y'] == self.location.closest_point.y and self.path[i]['z'] == self.location.closest_point.z:
             #         self.localization_closest_point_index = i
 
-            look_ahead_point_index, look_ahead_point = self.local_planning()
+            if self.initial_lane != self.path_as_lanes[0]:
+                self.get_logger().error("The start lane from localization Node is not the first lane in path")
+                return
+            
+            search_area, search_area_as_lanes = self.create_search_area()
+            look_ahead_point_index, look_ahead_point = self.local_planning(search_area, search_area_as_lanes)
             if not look_ahead_point and not look_ahead_point_index:
                 return
 
-            self.behavioural_planning(look_ahead_point, look_ahead_point_index)
+            self.behavioural_planning(look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes)
             
             # publishing
             lookahead_point = LookAheadMsg()
@@ -538,8 +534,8 @@ class Planning(Node):
             lookahead_point.stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
-
-            # print("output: ", self.status.data, self.location.closest_lane_names.data, look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
+        
+            print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_route_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
     
 
