@@ -64,7 +64,7 @@ class Localization(Node):
         self.ground_truth_msg = PoseStamped()
         self.imu_msg = Imu()
         self.isGlobalPositioningDone = False
-        self.local_positioning_depth_search = 2
+        self.local_positioning_depth_search = 1
 
         # Initialize instance variables for storing closest point and lanes
         self.closest_point = None
@@ -74,7 +74,7 @@ class Localization(Node):
     def load_map(self):
         # Get the path to the resource directory
         package_share_directory = get_package_share_directory('simple_av')
-        json_file_path = os.path.join(package_share_directory, 'resource', 'map.json')
+        json_file_path = os.path.join(package_share_directory, 'resource', 'V3_map.json')
         # Load and read the JSON file
         with open(json_file_path, 'r') as json_file:
             map_data = json.load(json_file)
@@ -130,7 +130,8 @@ class Localization(Node):
                 # f'roll, pitch: {ground_truth.pose.orientation.x, ground_truth.pose.orientation.y}\n'
                 # f'Received Pose :\n'
                 # f'grount t - x: {ground_truth.pose.position.x}, y = {ground_truth.pose.position.y}, z = {ground_truth.pose.position.z}\n'
-                f'Position - x: {msg_pose.pose.position.x}, y = {msg_pose.pose.position.y}, z = {msg_pose.pose.position.z}\n'
+                f'localization\n'
+                f'curr Position:  {msg_pose.pose.position.x}, {msg_pose.pose.position.y}, {msg_pose.pose.position.z}\n'
                 f'Closest point: {closest_point.get_point()}\n'
                 f'Closest Lane: {closest_lane_name}\n'
                 f'Minimum distance - {min_distance}\n'
@@ -170,6 +171,7 @@ class Localization(Node):
                     if lane['name'] == lane_name:
                         lanes_to_visit.extend([(next_lane, depth + 1) for next_lane in lane.get('nextLanes', [])])
                         lanes_to_visit.extend([(prev_lane, depth + 1) for prev_lane in lane.get('prevLanes', [])])
+                        lanes_to_visit.extend([(adjacent_lane, depth + 1) for adjacent_lane in lane.get('adjacentLanes', [])])
         search_areas.append(list(search_area))
         
         unique_elements = set()  # Using a set to store unique elements
@@ -209,10 +211,10 @@ class Localization(Node):
             if search_lanes:
                 lane_name = lane
                 lanelet_obj = self.get_lane(lane)
-                waypoints = lanelet_obj['waypoints']
+                waypoints = lanelet_obj['dense_waypoints']
             else:
                 lane_name = lane['name']
-                waypoints = lane['waypoints']
+                waypoints = lane['dense_waypoints']
 
             for waypoint in waypoints:
                 x = waypoint['x']
@@ -311,9 +313,6 @@ class Localization(Node):
             return closest_point, closest_lane_name, min_distance
         else:
             return closest_point, closest_lane_name, min_distance
-
-    def get_vehicle_heading():
-        pass
 
     def localization(self):
         """
