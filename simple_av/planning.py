@@ -94,7 +94,7 @@ class Planning(Node):
         self.path_as_lanes = None  # List of lanes from start point to destination
         self.path = None  # List of points in order of path_as_lanes
         self.route = None # List of lanes from start point to destination
-        self.current_route_index = 0
+        self.current_lane_index = 0
         
         self.base_speed = 10.0 # meters/second
         self.speed_limit = 10.0 # meters/second
@@ -400,10 +400,10 @@ class Planning(Node):
         except:
             # vehicle is out of path
             self.get_logger().warning("Vehicle is out of the Path")
-            lane_index = self.current_route_index
-        if lane_index in range(self.current_route_index, self.current_route_index + self.search_depth):
-            self.current_route_index = lane_index
-        search_area_as_lanes = self.path_as_lanes[self.current_route_index: self.current_route_index + self.search_depth]
+            lane_index = self.current_lane_index
+        if lane_index in range(self.current_lane_index, self.current_lane_index + self.search_depth):
+            self.current_lane_index = lane_index
+        search_area_as_lanes = self.path_as_lanes[self.current_lane_index: self.current_lane_index + self.search_depth]
 
         # convert lanes in the search are into a list of waypoints
         search_area = []
@@ -455,13 +455,31 @@ class Planning(Node):
                     color = light.color
             return map_primitive_id, color
     
-    def manage_traffic_lights(self, look_ahead_point, look_ahead_point_index, search_area_as_lanes):
-        map_primitive_id, color = self.get_trafficSignal()
-        current_route = self.route[self.current_route_index]
-        lane_obj = self.find_lane_by_name(current_route)
-        trafficlightsWayIDs = lane_obj['trafficlightsWayIDs']
-        print(f"Map Primitive ID: {map_primitive_id}, Color: {color}, current route {current_route}, ID {trafficlightsWayIDs}")
+    def manage_traffic_lights(self, status, look_ahead_point, look_ahead_point_index, search_area_as_lanes):
+        trafficLight_id, color = self.get_trafficSignal()
         
+        current_lane = self.route[self.current_lane_index]
+        lane_obj = self.find_lane_by_name(current_lane)
+        lane_trafficlightsID = lane_obj['trafficlightsWayIDs']
+        
+        print(f"Map Primitive ID: {trafficLight_id}, Color: {color}, current route {current_lane}, ID {lane_trafficlightsID}")
+        if lane_trafficlightsID and trafficLight_id in lane_trafficlightsID:
+            if color == 1:
+                self.get_logger().info("Red")
+                return 'Stop_red'
+            elif color == 3:
+                self.get_logger().info("Green")
+                return 'Cruise_green'
+            elif color == 2:
+                self.get_logger().info('Amber')
+                return 'Stop_red'
+            else:
+                self.get_logger().error("Unkown traffic light color")
+                return 'Cruise'
+        else:
+            self.get_logger().info("no traffic light")
+            return 'Cruise'
+
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         
@@ -471,16 +489,15 @@ class Planning(Node):
 
         path_curve_detector = PathCurveDetector(self.path, angle_threshold=3)
         curves = path_curve_detector.find_curves_in_path()
-
-        self.manage_traffic_lights(look_ahead_point, look_ahead_point_index, search_area_as_lanes)
         
-        _status = self.adjust_speed(curves, look_ahead_point, look_ahead_point_index)
+        status = self.adjust_speed(curves, look_ahead_point, look_ahead_point_index)
+        status = self.manage_traffic_lights(status, look_ahead_point, look_ahead_point_index, search_area_as_lanes)
 
         if dist_to_final_waypoint <= self.densify_interval:
             self.status.data = 'Park'
         elif dist_to_final_waypoint <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'
-        elif _status == "Turn":
+        elif status == "Turn":
             self.status.data = 'Turn'
         else:
             self.status.data = 'Cruise'
@@ -499,7 +516,7 @@ class Planning(Node):
                 print("path of lanes: ", self.path_as_lanes)
                 self.initial_lane = self.location.closest_lane_names.data
                 self.route = self.path_as_lanes[:]
-                self.current_route_index = 0
+                self.current_lane_index = 0
                 # print("path of lanes: ", self.path)
 
   
@@ -533,7 +550,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
         
-            # print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_route_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
+            # print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
     
 
