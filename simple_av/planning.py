@@ -460,7 +460,7 @@ class Planning(Node):
                     color = light.color
             return map_primitive_id, color
     
-    def manage_traffic_lights(self, status, look_ahead_point, look_ahead_point_index, search_area_as_lanes):
+    def manage_traffic_lights(self, look_ahead_point, look_ahead_point_index, search_area_as_lanes):
         trafficLight_id, color = self.get_trafficSignal()
         
         current_lane = self.route[self.current_lane_index]
@@ -468,22 +468,37 @@ class Planning(Node):
         lane_trafficlightsID = lane_obj['trafficlightsWayIDs']
         
         print(f"Map Primitive ID: {trafficLight_id}, Color: {color}, current route {current_lane}, ID {lane_trafficlightsID}")
+        isTrafficLightDetected = False
+        task = None
+        _color = None
         if lane_trafficlightsID and trafficLight_id in lane_trafficlightsID:
             if color == 1:
                 self.get_logger().info("Red")
-                return 'Stop_red'
+                isTrafficLightDetected = True
+                task = 'Stop_red'
+                _color = 'red'
             elif color == 3:
                 self.get_logger().info("Green")
-                return 'Cruise_green'
+                isTrafficLightDetected = True
+                task = 'Cruise_green'
+                _color = 'green'
             elif color == 2:
                 self.get_logger().info('Amber')
-                return 'Stop_red'
+                isTrafficLightDetected = True
+                task = 'Stop_amber'
+                _color = 'amber'
             else:
                 self.get_logger().error("Unkown traffic light color")
-                return 'Cruise'
+                isTrafficLightDetected = True
+                task = 'Unknown'
+                _color = 'unkown'
         else:
             self.get_logger().info("no traffic light")
-            return 'Cruise'
+            isTrafficLightDetected = False
+            task = 'Cruise'
+            _color = 'unkown'
+        
+        return isTrafficLightDetected, task, _color
 
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
@@ -495,15 +510,23 @@ class Planning(Node):
         else:
             dist_to_final_waypoint = 2 * self.stop_distance
 
-        self.curve_handler(look_ahead_point, look_ahead_point_index)
-        
-        status = self.manage_traffic_lights(status, look_ahead_point, look_ahead_point_index, search_area_as_lanes)
+        isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
+        isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor = self.manage_traffic_lights(look_ahead_point, look_ahead_point_index, search_area_as_lanes)
 
         if dist_to_final_waypoint <= self.densify_interval:
             self.status.data = 'Park'
         elif dist_to_final_waypoint <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'
-        elif status == "Turn":
+        elif isTrafficLightDetected and isTurnDetected:
+            if trafficLightColor == 'green' or trafficLightColor == 'unkown':
+                self.status.data = 'Turn'
+            else:
+                self.status.data = vehilceTaskForTrafficLight
+        elif isTrafficLightDetected:
+            if vehilceTaskForTrafficLight == 'Unknown':
+                vehilceTaskForTrafficLight = 'Cruise_green'
+            self.status.data = vehilceTaskForTrafficLight
+        elif isTurnDetected:
             self.status.data = 'Turn'
         else:
             self.status.data = 'Cruise'
