@@ -472,6 +472,8 @@ class Planning(Node):
         task = None
         _color = None
         if lane_trafficlightsID and trafficLight_id in lane_trafficlightsID:
+            p1 = lane_obj['stopLinePoseP1']
+            p2 = lane_obj['stopLinePoseP2']
             if color == 1:
                 self.get_logger().info("Red")
                 isTrafficLightDetected = True
@@ -497,8 +499,12 @@ class Planning(Node):
             isTrafficLightDetected = False
             task = 'Cruise'
             _color = 'unkown'
+            p1 = None
+            p2 = None
         
-        return isTrafficLightDetected, task, _color
+        print("p1", type(p1), p1)
+        print("p2", type(p2), p2)
+        return isTrafficLightDetected, task, _color, p1, p2
 
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
@@ -509,20 +515,32 @@ class Planning(Node):
             dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
         else:
             dist_to_final_waypoint = 2 * self.stop_distance
+        stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
 
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
-        isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor = self.manage_traffic_lights(look_ahead_point, look_ahead_point_index, search_area_as_lanes)
+        isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights(look_ahead_point, look_ahead_point_index, search_area_as_lanes)
+
 
         if dist_to_final_waypoint <= self.densify_interval:
             self.status.data = 'Park'
         elif dist_to_final_waypoint <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'
         elif isTrafficLightDetected and isTurnDetected:
+            new_x = (p1[0] + p2[0])/2
+            new_y = (p1[1] + p2[1])/2
+            new_z = (p1[2] + p2[2])/2
+            stop_point = Point(x=new_x, y=new_y, z=new_z)
+            print("new point: ", stop_point)
             if trafficLightColor == 'green' or trafficLightColor == 'unkown':
                 self.status.data = 'Turn'
             else:
                 self.status.data = vehilceTaskForTrafficLight
         elif isTrafficLightDetected:
+            new_x = (p1[0] + p2[0])/2
+            new_y = (p1[1] + p2[1])/2
+            new_z = (p1[2] + p2[2])/2
+            stop_point = Point(x=new_x, y=new_y, z=new_z)
+            print("new point: ", stop_point)
             if vehilceTaskForTrafficLight == 'Unknown':
                 vehilceTaskForTrafficLight = 'Cruise_green'
             self.status.data = vehilceTaskForTrafficLight
@@ -530,6 +548,8 @@ class Planning(Node):
             self.status.data = 'Turn'
         else:
             self.status.data = 'Cruise'
+        
+        return stop_point
            
 
     def mission_planning(self):
@@ -571,12 +591,12 @@ class Planning(Node):
             if not look_ahead_point and not look_ahead_point_index:
                 return
 
-            self.behavioural_planning(look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes)
+            stop_point = self.behavioural_planning(look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes)
             
             # publishing
             lookahead_point = LookAheadMsg()
             lookahead_point.look_ahead_point = Point(x=look_ahead_point['x'], y=look_ahead_point['y'], z=look_ahead_point['z'])
-            lookahead_point.stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
+            lookahead_point.stop_point = stop_point
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
         
