@@ -524,7 +524,7 @@ class Planning(Node):
         
         distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
 
-        if distance_to_stop_point <= self.densify_interval:
+        if distance_to_stop_point <= self.densify_interval * 2:
             self.status.data = 'Park'
         elif distance_to_stop_point <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'

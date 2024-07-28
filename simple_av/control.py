@@ -169,7 +169,7 @@ class VehicleControl(Node):
         target_speed = self.lookAhead.speed_limit
         accel = 0.0
 
-        if status == "Decelerate":
+        if status == "Decelerate" or status == "Stop_red" or status == "Stop_amber":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
 
@@ -179,7 +179,7 @@ class VehicleControl(Node):
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
         longitudinal_command.acceleration = accel
 
-        if self.lookAhead.status.data == "Decelerate":
+        if status == "Decelerate" or status == "Stop_red" or status == "Stop_amber":
             self.get_logger().info(
             f'speed: {current_speed}\n'
             f'target speed: {target_speed}\n'
@@ -198,7 +198,7 @@ class VehicleControl(Node):
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         # Gradual deceleration based on distance and current speed
         # Using a nonlinear deceleration curve for smoother braking
-        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.1)
+        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.4)
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
