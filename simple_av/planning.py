@@ -485,7 +485,10 @@ class Planning(Node):
         
         # print("behavioural planning ... ")
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
+        if self.path[-1] in search_area_as_lanes:
+            dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
+        else:
+            dist_to_final_waypoint = 2 * self.stop_distance
 
         path_curve_detector = PathCurveDetector(self.path, angle_threshold=3)
         curves = path_curve_detector.find_curves_in_path()
@@ -537,6 +540,7 @@ class Planning(Node):
                 return
             
             search_area, search_area_as_lanes = self.create_search_area()
+            
             look_ahead_point_index, look_ahead_point = self.local_planning(search_area, search_area_as_lanes)
             if not look_ahead_point and not look_ahead_point_index:
                 return
