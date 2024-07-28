@@ -511,36 +511,29 @@ class Planning(Node):
         
         # print("behavioural planning ... ")
         vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
-        if self.path[-1] in search_area_as_lanes:
-            dist_to_final_waypoint = self.calculate_distance(vehicle_pose, self.path[-1], False)
-        else:
-            dist_to_final_waypoint = 2 * self.stop_distance
-        stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
-
+        
         isTurnDetected = self.curve_handler(look_ahead_point, look_ahead_point_index)
         isTrafficLightDetected, vehilceTaskForTrafficLight, trafficLightColor, p1, p2 = self.manage_traffic_lights(look_ahead_point, look_ahead_point_index, search_area_as_lanes)
-
-
-        if dist_to_final_waypoint <= self.densify_interval:
-            self.status.data = 'Park'
-        elif dist_to_final_waypoint <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
-            self.status.data ='Decelerate'
-        elif isTrafficLightDetected and isTurnDetected:
+        
+        stop_point = Point(x=self.path[-1]['x'], y=self.path[-1]['y'], z=self.path[-1]['z'])
+        if isTrafficLightDetected:
             new_x = (p1[0] + p2[0])/2
             new_y = (p1[1] + p2[1])/2
             new_z = (p1[2] + p2[2])/2
             stop_point = Point(x=new_x, y=new_y, z=new_z)
-            print("new point: ", stop_point)
+        
+        distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
+
+        if distance_to_stop_point <= self.densify_interval:
+            self.status.data = 'Park'
+        elif distance_to_stop_point <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
+            self.status.data ='Decelerate'
+        elif isTrafficLightDetected and isTurnDetected:
             if trafficLightColor == 'green' or trafficLightColor == 'unkown':
                 self.status.data = 'Turn'
             else:
                 self.status.data = vehilceTaskForTrafficLight
         elif isTrafficLightDetected:
-            new_x = (p1[0] + p2[0])/2
-            new_y = (p1[1] + p2[1])/2
-            new_z = (p1[2] + p2[2])/2
-            stop_point = Point(x=new_x, y=new_y, z=new_z)
-            print("new point: ", stop_point)
             if vehilceTaskForTrafficLight == 'Unknown':
                 vehilceTaskForTrafficLight = 'Cruise_green'
             self.status.data = vehilceTaskForTrafficLight
