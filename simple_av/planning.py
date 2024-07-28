@@ -347,7 +347,7 @@ class Planning(Node):
 
     def adjust_speed_to_curve(self, curve_angle):
         # return self.base_speed
-        if curve_angle >= 0.20:
+        if curve_angle >= 0.25:
             return float(math.ceil(self.base_speed / 3.0))
         else:
             return float(math.ceil(self.base_speed / 2))
@@ -580,7 +580,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
         
-            # print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
+            print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
     
 
