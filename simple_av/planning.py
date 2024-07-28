@@ -114,7 +114,7 @@ class Planning(Node):
 
         self.curve_finish_point = None
         
-        self.dest_lanelet = "lanelet69"
+        self.dest_lanelet = "lanelet149"
         
     
     def load_map_data(self):
@@ -347,7 +347,7 @@ class Planning(Node):
 
     def adjust_speed_to_curve(self, curve_angle):
         # return self.base_speed
-        if curve_angle >= 0.25:
+        if curve_angle >= 0.20:
             return float(math.ceil(self.base_speed / 3.0))
         else:
             return float(math.ceil(self.base_speed / 2))
@@ -356,8 +356,8 @@ class Planning(Node):
     def curve_detector(self, curves, look_ahead_point, look_ahead_point_index):
         
         if look_ahead_point_index >= len(self.path) - 5 and look_ahead_point_index <= len(self.path):
-            return "Cruise", 0.0
-        
+            return False, 0.0
+
         if not self.isCurveStarted and not self.isCurveFinished:
             for curve in curves:
                 k, v = next(iter(curve.items()))
@@ -368,30 +368,35 @@ class Planning(Node):
                     self.isCurveStarted = True
                     self.isCurveFinished = False
                     # self.isCurveDetected = True
-                    return "Turn", self.curve_angle    
+                    return True, self.curve_angle    
         if self.isCurveStarted and not self.isCurveFinished:
             vehicle_pose = {'x': self.pose.pose.position.x, 'y': self.pose.pose.position.y, 'z': self.pose.pose.position.z}
             if self.calculate_distance(vehicle_pose, self.curve_finish_point) <= self.densify_interval * 2:
                 print("debug - curve finished")
                 self.isCurveFinished = True
                 self.isCurveStarted = True
-                return "Cruise", 0.0
-            return "Turn", self.curve_angle
+                return False, 0.0
+            return True, self.curve_angle
         if self.isCurveStarted and self.isCurveFinished:
             self.isCurveStarted = False
             self.isCurveFinished = False
             # self.isCurveDetected = False
-            return "Cruise", 0.0
-        return "Cruise", 0.0
+            return False, 0.0
+        return False, 0.0
 
-    def adjust_speed(self, curves, look_ahead_point, look_ahead_point_index):
-        _status, curve_angle = self.curve_detector(curves, look_ahead_point, look_ahead_point_index)
-        if _status == 'Turn':
+
+    def curve_handler(self, look_ahead_point, look_ahead_point_index):
+        path_curve_detector = PathCurveDetector(self.path, angle_threshold=3) # initializing object from class
+        curves = path_curve_detector.find_curves_in_path() # locating curves on the route/path
+        
+        isTurnDetected, curve_angle = self.curve_detector(curves, look_ahead_point, look_ahead_point_index)
+        
+        if isTurnDetected:
             self.speed_limit = self.adjust_speed_to_curve(curve_angle)
         else:
             self.speed_limit = self.base_speed
         
-        return _status
+        return isTurnDetected
     
     def create_search_area(self):
         
@@ -490,10 +495,8 @@ class Planning(Node):
         else:
             dist_to_final_waypoint = 2 * self.stop_distance
 
-        path_curve_detector = PathCurveDetector(self.path, angle_threshold=3)
-        curves = path_curve_detector.find_curves_in_path()
+        self.curve_handler(look_ahead_point, look_ahead_point_index)
         
-        status = self.adjust_speed(curves, look_ahead_point, look_ahead_point_index)
         status = self.manage_traffic_lights(status, look_ahead_point, look_ahead_point_index, search_area_as_lanes)
 
         if dist_to_final_waypoint <= self.densify_interval:
