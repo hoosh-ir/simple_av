@@ -333,7 +333,7 @@ class Planning(Node):
             self.get_logger().error("first_ahead_point >= len(self.path)")
             return first_ahead_point, self.path[first_ahead_point]
         
-        print(f'first_ahead_point = {first_ahead_point}, end of search area = {search_area_indexes_on_path[1]}')
+        # print(f'first_ahead_point = {first_ahead_point}, end of search area = {search_area_indexes_on_path[1]}')
         # find the lookahead point in front of the vehicle.  lookahead distance - interval < look ahead point distance <= lookahead distance
         for i in range(first_ahead_point, search_area_indexes_on_path[1]):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
@@ -457,9 +457,11 @@ class Planning(Node):
     
     def manage_traffic_lights(self, look_ahead_point, look_ahead_point_index, search_area_as_lanes):
         map_primitive_id, color = self.get_trafficSignal()
-        print(f"Map Primitive ID: {map_primitive_id}, Color: {color}")
-
-
+        current_route = self.route[self.current_route_index]
+        lane_obj = self.find_lane_by_name(current_route)
+        trafficlightsWayIDs = lane_obj['trafficlightsWayIDs']
+        print(f"Map Primitive ID: {map_primitive_id}, Color: {color}, current route {current_route}, ID {trafficlightsWayIDs}")
+        
 
     def behavioural_planning(self, look_ahead_point, look_ahead_point_index, search_area, search_area_as_lanes):
         
@@ -513,10 +515,6 @@ class Planning(Node):
                 print("error - no location or pose input")
                 return None
             
-            # for i in range(len(self.path)):
-            #     if self.path[i]['x'] == self.location.closest_point.x and self.path[i]['y'] == self.location.closest_point.y and self.path[i]['z'] == self.location.closest_point.z:
-            #         self.localization_closest_point_index = i
-
             if self.initial_lane != self.path_as_lanes[0]:
                 self.get_logger().error("The start lane from localization Node is not the first lane in path")
                 return
@@ -535,7 +533,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
         
-            print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_route_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
+            # print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_route_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
     
 
