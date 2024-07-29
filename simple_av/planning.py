@@ -333,7 +333,7 @@ class Planning(Node):
             self.get_logger().error("first_ahead_point >= len(self.path)")
             return first_ahead_point, self.path[first_ahead_point]
         
-        # print(f'first_ahead_point = {first_ahead_point}, end of search area = {search_area_indexes_on_path[1]}')
+        print(f'first_ahead_point = {first_ahead_point}, end of search area = {search_area_indexes_on_path[1]}')
         # find the lookahead point in front of the vehicle.  lookahead distance - interval < look ahead point distance <= lookahead distance
         for i in range(first_ahead_point, search_area_indexes_on_path[1]):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
@@ -417,7 +417,7 @@ class Planning(Node):
             waypoints = lane_obj['dense_waypoints']
             for waypoint in waypoints:
                 search_area.append(waypoint)
-        # print("debug - search area as lanes", search_area_as_lanes, "size of search area: ", len(search_area))
+        print("debug - search area as lanes", search_area_as_lanes, "size of search area: ", len(search_area))
         return search_area, search_area_as_lanes
 
     def find_closest_waypoint_to_vehicle(self, vehicle_pose, search_area):
@@ -467,7 +467,7 @@ class Planning(Node):
         lane_obj = self.find_lane_by_name(current_lane)
         lane_trafficlightsID = lane_obj['trafficlightsWayIDs']
         
-        print(f"Map Primitive ID: {trafficLight_id}, Color: {color}, current route {current_lane}, ID {lane_trafficlightsID}")
+        # print(f"Map Primitive ID: {trafficLight_id}, Color: {color}, current route {current_lane}, ID {lane_trafficlightsID}")
         isTrafficLightDetected = False
         task = None
         _color = None
@@ -475,17 +475,17 @@ class Planning(Node):
             p1 = lane_obj['stopLinePoseP1']
             p2 = lane_obj['stopLinePoseP2']
             if color == 1:
-                self.get_logger().info("Red")
+                # self.get_logger().info("Red")
                 isTrafficLightDetected = True
                 task = 'Stop_red'
                 _color = 'red'
             elif color == 3:
-                self.get_logger().info("Green")
+                # self.get_logger().info("Green")
                 isTrafficLightDetected = True
                 task = 'Cruise_green'
                 _color = 'green'
             elif color == 2:
-                self.get_logger().info('Amber')
+                # self.get_logger().info('Amber')
                 isTrafficLightDetected = True
                 task = 'Stop_amber'
                 _color = 'amber'
@@ -501,9 +501,6 @@ class Planning(Node):
             _color = 'unkown'
             p1 = None
             p2 = None
-        
-        print("p1", type(p1), p1)
-        print("p2", type(p2), p2)
         return isTrafficLightDetected, task, _color, p1, p2
 
 
@@ -525,7 +522,14 @@ class Planning(Node):
         distance_to_stop_point = self.calculate_distance(vehicle_pose, {'x': stop_point.x, 'y': stop_point.y, 'z': stop_point.z})
 
         if distance_to_stop_point <= self.densify_interval * 2:
-            self.status.data = 'Park'
+            self.get_logger().info(f'is traffic light detected {isTrafficLightDetected}, color {trafficLightColor}')
+            if isTrafficLightDetected:
+                if trafficLightColor == "green":
+                    self.status.data = 'Cruise_green'
+                else:
+                    self.status.data = 'Park'
+            else:
+                self.status.data = 'Park'
         elif distance_to_stop_point <= self.stop_distance and look_ahead_point_index > len(self.path) - (self.stop_distance / self.densify_interval + 1):
             self.status.data ='Decelerate'
         elif isTrafficLightDetected and isTurnDetected:
@@ -596,9 +600,6 @@ class Planning(Node):
             print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
     
-
-
-
 
 def main(args=None):
     rclpy.init(args=args)

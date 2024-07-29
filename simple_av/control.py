@@ -137,9 +137,12 @@ class VehicleControl(Node):
 
         gear_msg = GearCommand()
         gear_msg.stamp = self.get_clock().now().to_msg()
-        gear_msg.command = GearCommand.DRIVE
         if self.lookAhead.status.data == "Park":
+            print("park")
             gear_msg.command = GearCommand.PARK
+        else:
+            print("drive")
+            gear_msg.command = GearCommand.DRIVE
         self.gear_publisher.publish(gear_msg)  
 
     
