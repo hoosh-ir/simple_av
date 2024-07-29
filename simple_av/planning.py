@@ -105,11 +105,11 @@ class Planning(Node):
         self.isCurveFinished = False
         self.isCurveStarted = False
         self.curve_angle = 0.0
+        
         self.densify_interval = 2.0 # meters
 
         self.localization_closest_point_index = 0
         self.initial_lane = None
-        self.search_area_first_lane_index = 0
         self.search_depth = 3
 
         self.curve_finish_point = None
@@ -308,9 +308,9 @@ class Planning(Node):
         Args:
             vehicle_pose (dict): The current pose of the vehicle.
             current_closest_point_index (int): The index of the current closest point in the path.
-            lookahead_distance (float): The distance lookahead_distance to consider the point as reached.
+            search_area (list): The list of the points in the search area.
         Returns:
-            tuple: The updated closest point index, the next point, and the status.
+            tuple: The updated closest point index and the next point.
         """
         search_area_indexes_on_path = (self.path.index(search_area[0]), self.path.index(search_area[-1]))
         if current_closest_point_index == len(self.path) - 1:
@@ -343,6 +343,8 @@ class Planning(Node):
         self.get_logger().error("--")
         # return first_ahead_point, self.path[first_ahead_point]
         # TODO: modify this part
+        if len(self.path) - first_ahead_point - 1 <= 10:
+            return len(self.path) - 1, self.path[-1]
         return first_ahead_point + 10, self.path[first_ahead_point + 10]
 
     def adjust_speed_to_curve(self, curve_angle):
