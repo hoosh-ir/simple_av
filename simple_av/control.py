@@ -232,24 +232,6 @@ class VehicleControl(Node):
 
         return steering_angle
     
-    def pure_pursuit_steering_angle1(self):
-
-        lookahead_x =self.lookAhead.look_ahead_point.x - self.pose.pose.position.x
-        lookahead_y = self.lookAhead.look_ahead_point.y - self.pose.pose.position.y
-
-        yaw = self.get_yaw_from_pose(self.ground_truth)
-        ld2 = lookahead_x ** 2 + lookahead_y ** 2
-
-        # calculate control input
-        alpha = np.arctan2(lookahead_y, lookahead_x) - yaw # vehicle heading angle error
-        steering_angle = np.arctan2(2.0 * self.wheel_base * np.sin(alpha) / ld2, 1.0) # given from geometric relationship
-
-        # self.get_logger().info(
-        #     f'steering_angle: {steering_angle} :\n'
-        #     f'yaw: {yaw} :\n'
-        # )
-
-        return steering_angle
 
     def get_yaw_from_pose(self, ground_truth):
         orientation = ground_truth.pose.orientation
