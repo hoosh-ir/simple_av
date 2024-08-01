@@ -157,7 +157,7 @@ class VehicleControl(Node):
         else:
             if self.pose and self.lookAhead and self.ground_truth:
                 steer = self.pure_pursuit_steering_angle()
-                if steer >= 1.25 or steer <= -0.67:
+                if steer >= 2 or steer <= -1.5:
                     self.steer_values.append(steer)
                 lateral_command.steering_tire_angle = steer
                 lateral_command.steering_tire_rotation_rate = 0.0
