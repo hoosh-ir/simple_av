@@ -96,8 +96,8 @@ class Planning(Node):
         self.route = None # List of lanes from start point to destination
         self.current_lane_index = 0
         
-        self.base_speed = 10.0 # meters/second
-        self.speed_limit = 10.0 # meters/second
+        self.base_speed = 15.0 # meters/second
+        self.speed_limit = 15.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 4 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn

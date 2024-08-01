@@ -102,6 +102,7 @@ class VehicleControl(Node):
 
         self.previous_steering_angle = 0
         self.steering_gain = 0.05  # Proportional gain for steering
+        self.maximum_accel = 4.0
 
     def pose_callback(self, msg):
         self.pose = msg
@@ -173,8 +174,8 @@ class VehicleControl(Node):
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
 
         accel = self.pid_controller.updatePID(current_speed, target_speed)
-        if accel > 3.0:
-            accel = 3.0
+        if accel > self.maximum_accel:
+            accel = self.maximum_accel
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
