@@ -101,7 +101,7 @@ class VehicleControl(Node):
         self.wheel_base = 2.75 # meters
 
         self.previous_steering_angle = 0
-        self.steering_gain = 0.05  # Proportional gain for steering
+        self.steering_gain = 0.2  # Proportional gain for steering
         self.maximum_accel = 4.0
 
     def pose_callback(self, msg):

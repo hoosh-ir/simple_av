@@ -96,8 +96,8 @@ class Planning(Node):
         self.route = None # List of lanes from start point to destination
         self.current_lane_index = 0
         
-        self.base_speed = 15.0 # meters/second
-        self.speed_limit = 15.0 # meters/second
+        self.base_speed = 10.0 # meters/second
+        self.speed_limit = 10.0 # meters/second
         self.lookahead_distance = self.base_speed * 2 # meters
         self.stop_distance = self.base_speed * 4 # meters
         self.status = String() # Cruise, Decelerate, PrepareToStop, Turn
@@ -115,7 +115,7 @@ class Planning(Node):
         self.curve_finish_point = None
         
         # self.dest_lanelet = "lanelet149"
-        self.dest_lanelet = "lanelet326"
+        self.dest_lanelet = "lanelet416"
         
     
     def load_map_data(self):
@@ -334,7 +334,7 @@ class Planning(Node):
             self.get_logger().error("first_ahead_point >= len(self.path)")
             return first_ahead_point, self.path[first_ahead_point]
         
-        print(f'first_ahead_point = {first_ahead_point}, end of search area = {search_area_indexes_on_path[1]}')
+        # print(f'first_ahead_point = {first_ahead_point}, end of search area = {search_area_indexes_on_path[1]}')
         # find the lookahead point in front of the vehicle.  lookahead distance - interval < look ahead point distance <= lookahead distance
         for i in range(first_ahead_point, search_area_indexes_on_path[1]):
             dist = self.calculate_distance(vehicle_pose, self.path[i])
@@ -606,7 +606,7 @@ class Planning(Node):
             lookahead_point.status = self.status
             lookahead_point.speed_limit = self.speed_limit
         
-            # print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
+            print(self.status.data, self.location.closest_lane_names.data, self.route[self.current_lane_index], look_ahead_point_index, self.localization_closest_point_index, len(self.path), self.speed_limit)
             self.planning_publisher.publish(lookahead_point)
     
 
