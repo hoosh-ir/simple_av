@@ -102,8 +102,7 @@ class VehicleControl(Node):
 
         self.previous_steering_angle = 0
         self.steering_gain = 0.2  # Proportional gain for steering
-
-        self.steer_values = []
+        self.maximum_accel = 4.0
 
     def pose_callback(self, msg):
         self.pose = msg
@@ -137,9 +136,12 @@ class VehicleControl(Node):
 
         gear_msg = GearCommand()
         gear_msg.stamp = self.get_clock().now().to_msg()
-        gear_msg.command = GearCommand.DRIVE
         if self.lookAhead.status.data == "Park":
+            print("park")
             gear_msg.command = GearCommand.PARK
+        else:
+            print("drive")
+            gear_msg.command = GearCommand.DRIVE
         self.gear_publisher.publish(gear_msg)  
 
     
@@ -154,8 +156,6 @@ class VehicleControl(Node):
         else:
             if self.pose and self.lookAhead and self.ground_truth:
                 steer = self.pure_pursuit_steering_angle()
-                if steer >= 1.25 or steer <= -0.67:
-                    self.steer_values.append(steer)
                 lateral_command.steering_tire_angle = steer
                 lateral_command.steering_tire_rotation_rate = 0.0
             else:
@@ -169,17 +169,19 @@ class VehicleControl(Node):
         target_speed = self.lookAhead.speed_limit
         accel = 0.0
 
-        if status == "Decelerate":
+        if status == "Decelerate" or status == "Stop_red" or status == "Stop_amber":
             distance_to_stop = self.calculate_distance(self.lookAhead.stop_point, self.pose.pose.position)
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
 
         accel = self.pid_controller.updatePID(current_speed, target_speed)
+        if accel > self.maximum_accel:
+            accel = self.maximum_accel
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
         longitudinal_command.acceleration = accel
 
-        if self.lookAhead.status.data == "Decelerate":
+        if status == "Decelerate" or status == "Stop_red" or status == "Stop_amber":
             self.get_logger().info(
             f'speed: {current_speed}\n'
             f'target speed: {target_speed}\n'
@@ -198,7 +200,7 @@ class VehicleControl(Node):
     def calculate_target_speed_for_stop(self, distance_to_stop, current_speed):
         # Gradual deceleration based on distance and current speed
         # Using a nonlinear deceleration curve for smoother braking
-        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.1)
+        return min(self.lookAhead.speed_limit, current_speed * (distance_to_stop / (self.lookAhead.speed_limit * 4))**0.45)
 
     def filter(self, new_value, previous_value, gain):
         return gain * previous_value + (1 - gain) * new_value
@@ -229,24 +231,6 @@ class VehicleControl(Node):
 
         return steering_angle
     
-    def pure_pursuit_steering_angle1(self):
-
-        lookahead_x =self.lookAhead.look_ahead_point.x - self.pose.pose.position.x
-        lookahead_y = self.lookAhead.look_ahead_point.y - self.pose.pose.position.y
-
-        yaw = self.get_yaw_from_pose(self.ground_truth)
-        ld2 = lookahead_x ** 2 + lookahead_y ** 2
-
-        # calculate control input
-        alpha = np.arctan2(lookahead_y, lookahead_x) - yaw # vehicle heading angle error
-        steering_angle = np.arctan2(2.0 * self.wheel_base * np.sin(alpha) / ld2, 1.0) # given from geometric relationship
-
-        # self.get_logger().info(
-        #     f'steering_angle: {steering_angle} :\n'
-        #     f'yaw: {yaw} :\n'
-        # )
-
-        return steering_angle
 
     def get_yaw_from_pose(self, ground_truth):
         orientation = ground_truth.pose.orientation
@@ -266,7 +250,6 @@ def main(args=None):
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
             node.control()   
     finally:
-        # print(node.steer_values)
         node.destroy_node()
         rclpy.shutdown()
     node.destroy_node()
