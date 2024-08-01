@@ -103,8 +103,6 @@ class VehicleControl(Node):
         self.previous_steering_angle = 0
         self.steering_gain = 0.05  # Proportional gain for steering
 
-        self.steer_values = []
-
     def pose_callback(self, msg):
         self.pose = msg
 
@@ -157,8 +155,6 @@ class VehicleControl(Node):
         else:
             if self.pose and self.lookAhead and self.ground_truth:
                 steer = self.pure_pursuit_steering_angle()
-                if steer >= 2 or steer <= -1.5:
-                    self.steer_values.append(steer)
                 lateral_command.steering_tire_angle = steer
                 lateral_command.steering_tire_rotation_rate = 0.0
             else:
@@ -251,7 +247,6 @@ def main(args=None):
             rclpy.spin_once(node, timeout_sec=None)# Set timeout to 0 to avoid delay
             node.control()   
     finally:
-        # print(node.steer_values)
         node.destroy_node()
         rclpy.shutdown()
     node.destroy_node()
