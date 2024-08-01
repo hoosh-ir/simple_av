@@ -173,6 +173,8 @@ class VehicleControl(Node):
             target_speed = self.calculate_target_speed_for_stop(distance_to_stop, current_speed)
 
         accel = self.pid_controller.updatePID(current_speed, target_speed)
+        if accel > 3.0:
+            accel = 3.0
 
         longitudinal_command = LongitudinalCommand()
         longitudinal_command.speed = self.velocity_report.longitudinal_velocity
