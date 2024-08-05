@@ -1,0 +1,6 @@
+uint32 WGS84=4326
+uint32 JGD2011=6668
+
+uint32 UNKNOWN=0
+
+uint32 value 0

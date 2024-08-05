@@ -1,0 +1,5 @@
+builtin_interfaces/Time stamp
+dm_object_info_msgs/ObjectId object_id
+dm_object_info_msgs/TimestampIts object_stamp
+
+float64 proc_time

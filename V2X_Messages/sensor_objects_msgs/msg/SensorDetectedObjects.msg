@@ -1,0 +1,2 @@
+uint64 sensor_type
+autoware_auto_perception_msgs/DetectedObjects detected_objects

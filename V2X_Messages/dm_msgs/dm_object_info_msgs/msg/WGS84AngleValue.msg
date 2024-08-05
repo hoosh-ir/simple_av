@@ -1,0 +1,14 @@
+# DF_WGS84 方位値
+# 0.01 deg
+uint16 NORTH=0
+uint16 EAST=9000
+uint16 WEST=18000
+uint16 SOUTH=27000
+
+uint16 MIN=0
+uint16 MAX=35999
+
+uint16 INVALID=36000
+uint16 UNKNOWN=36001
+
+uint16 value 36001

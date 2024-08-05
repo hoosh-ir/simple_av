@@ -1,0 +1,4 @@
+geometry_msgs/Point look_ahead_point
+geometry_msgs/Point stop_point
+std_msgs/String status
+float64 speed_limit
