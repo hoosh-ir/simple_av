@@ -1,1 +1,93 @@
-site_name: My Docs
+site_name: V2X E2E simulator
+
+theme:
+  language: en 
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    # - navigation.instant
+    - navigation.sections
+    # - navigation.expand
+    - navigation.path
+    - navigation.footer
+    - content.tabs.link
+    - search.suggest
+    # - search.highlight
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github    
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.arithmatex:
+      generic: true  
+
+extra:
+  version:
+    provider: mike
+
+extra_javascript:
+    - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+
+  - Getting started:
+    - Quick Start Demo: GettingStarted/QuickStartDemo/index.md
+    - Setup Unity Project: GettingStarted/SetupUnityProject/index.md
+
+  - Introduction:
+    - Autoware, Awsim and Our project : Introduction/AutowareAwsimAndV2X/index.md
+
+  - Project guide:
+    # - Directory: ProjectGuide/Directory/index.md
+    - Kashiwa Scenes: ProjectGuide/KashiwaScenes/index.md
+    - Git Branch: ProjectGuide/GitBranch/index.md
+    - External Libraries: ProjectGuide/ExternalLibraries/index.md
+  
+  - Simple-AV: 
+    - Introduction: Simple-AV/Description/index.md
+    - Setting up the System: Simple-AV/SystemSetup/index.md
+    - Build Awsim msg: Simple-AV/Add Awsim msg/index.md
+    - Communicating with AWSIM: Simple-AV/CommunicatingWithAWSIM/index.md
+    - Map (*.json): Simple-AV/JsonMap/index.md
+    - Modules:
+      - Localization: Simple-AV/Modules/Localization/index.md
+      - Path_planning: Simple-AV/Modules/Path_planning/index.md
+      - Perception: Simple-AV/Modules/Perception/index.md
+      - Control: Simple-AV/Modules/Control/index.md
+  - License: License/index.md
+  - Contact: Contact/index.md
+
+
