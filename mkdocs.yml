@@ -71,10 +71,8 @@ nav:
     - Autoware, Awsim and Our project : Introduction/AutowareAwsimAndV2X/index.md
 
   - Project guide:
-    # - Directory: ProjectGuide/Directory/index.md
-    - Kashiwa Scenes: ProjectGuide/KashiwaScenes/index.md
+    - Shinjuku Scenes: ProjectGuide/ShinjukuScenes/index.md
     - Git Branch: ProjectGuide/GitBranch/index.md
-    - External Libraries: ProjectGuide/ExternalLibraries/index.md
   
   - Simple-AV: 
     - Introduction: Simple-AV/Description/index.md
@@ -87,6 +85,7 @@ nav:
       - Path_planning: Simple-AV/Modules/Path_planning/index.md
       - Perception: Simple-AV/Modules/Perception/index.md
       - Control: Simple-AV/Modules/Control/index.md
+
   - License: License/index.md
   - Contact: Contact/index.md
 
