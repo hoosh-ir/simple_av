@@ -13,6 +13,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         # Include the resource directory
         (os.path.join('share', package_name, 'resource'), glob('resource/*')),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
