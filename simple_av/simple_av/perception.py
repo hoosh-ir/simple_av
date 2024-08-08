@@ -4,6 +4,7 @@ from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
 from simple_av_msgs.msg import LocalizationMsg
 from v2x_msgs.msg import CooperativeSignalsMessage
+from simple_av_msgs.msg import TrafficSignalArray  # Import the custom message
 
 
 class Perception(Node):
@@ -26,7 +27,7 @@ class Perception(Node):
         self.trafficSignal = CooperativeSignalsMessage() # Initialize traffic signal
 
         # Initialize the publisher
-        # self.planning_publisher = self.create_publisher(LookAheadMsg, 'simple_av/planning/lookahead_point', 10)
+        self.publisher_ = self.create_publisher(TrafficSignalArray, 'traffic_signals', 10)
 
         def trafficSignal_callback(self, msg):
             """
