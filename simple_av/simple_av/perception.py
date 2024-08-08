@@ -4,22 +4,12 @@ from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, Point
 from simple_av_msgs.msg import LocalizationMsg
 from v2x_msgs.msg import CooperativeSignalsMessage
-from simple_av_msgs.msg import TrafficSignalArray  # Import the custom message
+from simple_av_msgs.msg import TrafficSignalsArray 
 
 
 class Perception(Node):
     def __init__(self):
-        super().__init__('Planning')
-        # Load the Json map
-        self.map_data = self.load_map_data()
-        self.map_data = self.map_data["LaneLetsArray"]
-
-        self.graph = {lanelet['name']: {
-            'waypoints': lanelet['waypoints'],
-            'nextLanes': lanelet.get('nextLanes', []),
-            'prevLanes': lanelet.get('prevLanes', []),
-            'adjacentLanes': lanelet.get('adjacentLanes', []),
-        } for lanelet in self.map_data}
+        super().__init__('Perception')
 
         # Create subscriber to /v2x/traffic_signals1  topic
         self.subscriptionPose = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals1', self.trafficSignal_callback, 10)
@@ -27,15 +17,15 @@ class Perception(Node):
         self.trafficSignal = CooperativeSignalsMessage() # Initialize traffic signal
 
         # Initialize the publisher
-        self.publisher_ = self.create_publisher(TrafficSignalArray, 'simple_av/perception/traffic_signals', 10)
+        self.publisher_ = self.create_publisher(TrafficSignalsArray, 'simple_av/perception/traffic_signals', 10)
 
-        def trafficSignal_callback(self, msg):
-            """
-            Callback function to update the pose data.
-            Args:
-                msg (PoseStamped): The pose message received from the topic.
-            """
-            self.trafficSignal = msg
+    def trafficSignal_callback(self, msg):
+        """
+        Callback function to update the pose data.
+        Args:
+            msg (PoseStamped): The pose message received from the topic.
+        """
+        self.trafficSignal = msg
 
     def get_trafficSignals(self):
         v2i_traffic_signals_id = []
@@ -56,7 +46,7 @@ class Perception(Node):
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
 
         # Create an instance of the custom message
-        msg = TrafficSignalArray()
+        msg = TrafficSignalsArray()
         msg.v2i_traffic_signals_id = v2i_traffic_signals_id
         msg.v2i_traffic_signals_colors = v2i_traffic_signals_colors
 
