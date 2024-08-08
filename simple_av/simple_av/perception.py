@@ -23,14 +23,18 @@ class Perception(Node):
         # Create subscriber to /v2x/traffic_signals1  topic
         self.subscriptionPose = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals1', self.trafficSignal_callback, 10)
 
-        # Create subscriber to /sensing/gnss/pose topic
-        self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
-
-        # Create subscriber to /localization/location topic
-        self.subscriptionLocation = self.create_subscription(LocalizationMsg, 'simple_av/localization/location', self.location_callback, 10)
+        self.trafficSignal = CooperativeSignalsMessage() # Initialize traffic signal
 
         # Initialize the publisher
         # self.planning_publisher = self.create_publisher(LookAheadMsg, 'simple_av/planning/lookahead_point', 10)
+
+        def trafficSignal_callback(self, msg):
+            """
+            Callback function to update the pose data.
+            Args:
+                msg (PoseStamped): The pose message received from the topic.
+            """
+            self.trafficSignal = msg
 
     def get_trafficSignals(self):
         v2i_traffic_signals_id = []
@@ -48,12 +52,12 @@ class Perception(Node):
             return v2i_traffic_signals_id, v2i_traffic_signals_colors
     
     def perception(self):
-        pass
+        v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
 
+        # publishing
         
 
-
-
+        
 
 def main(args=None):
     rclpy.init(args=args)
