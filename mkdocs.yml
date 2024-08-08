@@ -67,9 +67,6 @@ nav:
     - Quick Start Demo: GettingStarted/QuickStartDemo/index.md
     - Setup Unity Project: GettingStarted/SetupUnityProject/index.md
 
-  - Introduction:
-    - Autoware, Awsim and Our project : Introduction/AutowareAwsimAndV2X/index.md
-
   - Project guide:
     - Shinjuku Scenes: ProjectGuide/ShinjukuScenes/index.md
     - Git Branch: ProjectGuide/GitBranch/index.md
