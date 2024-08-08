@@ -1,19 +1,11 @@
-# Welcome to V2X E2E simulator
-
-<<<<<<< Updated upstream
-![](E2E_MAIN.png)
-=======
-<!-- For full documentation visit [mkdocs.org](https://www.mkdocs.org). -->
-
-## Some pictures
->>>>>>> Stashed changes
+# Welcome to Simple AV project
 
 
-<!--## Some video
+## How it looks
 
 <video width="1920" controls autoplay muted loop>
-<source src="video.mp4" type="video/mp4">
-</video> -->
+<source src="trailer.mp4" type="video/mp4">
+</video>
 
 <!-- ## Some notes
 
