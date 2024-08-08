@@ -11,6 +11,7 @@ from simple_av_msgs.msg import LocalizationMsg
 from simple_av_msgs.msg import LookAheadMsg
 from v2x_msgs.msg import CooperativeSignalsMessage
 import numpy as np
+from simple_av_msgs.msg import TrafficSignalsArray
 
 
 class PathCurveDetector:
@@ -74,7 +75,7 @@ class Planning(Node):
         } for lanelet in self.map_data}
 
         # Create subscriber to /v2x/traffic_signals1  topic
-        self.subscriptionPose = self.create_subscription(CooperativeSignalsMessage, '/v2x/traffic_signals1', self.trafficSignal_callback, 10)
+        self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, '/v2x/traffic_signals1', self.trafficSignal_callback, 10)
 
         # Create subscriber to /sensing/gnss/pose topic
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)

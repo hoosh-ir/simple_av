@@ -27,7 +27,7 @@ class Perception(Node):
         self.trafficSignal = CooperativeSignalsMessage() # Initialize traffic signal
 
         # Initialize the publisher
-        self.publisher_ = self.create_publisher(TrafficSignalArray, 'traffic_signals', 10)
+        self.publisher_ = self.create_publisher(TrafficSignalArray, 'simple_av/perception/traffic_signals', 10)
 
         def trafficSignal_callback(self, msg):
             """
@@ -55,7 +55,14 @@ class Perception(Node):
     def perception(self):
         v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
 
-        # publishing
+        # Create an instance of the custom message
+        msg = TrafficSignalArray()
+        msg.v2i_traffic_signals_id = v2i_traffic_signals_id
+        msg.v2i_traffic_signals_colors = v2i_traffic_signals_colors
+
+        # Publish the message
+        self.publisher_.publish(msg)
+        self.get_logger().info('Published traffic signal data')
         
 
         
