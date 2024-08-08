@@ -74,8 +74,8 @@ class Planning(Node):
             'adjacentLanes': lanelet.get('adjacentLanes', []),
         } for lanelet in self.map_data}
 
-        # Create subscriber to /v2x/traffic_signals1  topic
-        self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, '/v2x/traffic_signals1', self.trafficSignal_callback, 10)
+        # Create subscriber to 'simple_av/perception/traffic_signals'  topic
+        self.subscriptionTrafficSignal = self.create_subscription(TrafficSignalsArray, 'simple_av/perception/traffic_signals', self.trafficSignal_callback, 10)
 
         # Create subscriber to /sensing/gnss/pose topic
         self.subscriptionPose = self.create_subscription(PoseStamped, '/sensing/gnss/pose', self.pose_callback, 10)
@@ -89,7 +89,7 @@ class Planning(Node):
 
         self.pose = PoseStamped()  # Initialize pose
         self.location = LocalizationMsg()  # Initialize location
-        self.trafficSignal = CooperativeSignalsMessage() # Initialize traffic signal
+        self.trafficSignal = TrafficSignalsArray() # Initialize traffic signal
 
         self.isPathPlanned = False  # Flag to check if the path has been planned
         self.path_as_lanes = None  # List of lanes from start point to destination
@@ -454,23 +454,11 @@ class Planning(Node):
             
         return look_ahead_point_index, look_ahead_point
     
-    def get_trafficSignals(self):
-        v2i_traffic_signals_id = []
-        v2i_traffic_signals_colors = []
-        if self.trafficSignal:
-            signals = self.trafficSignal.traffic_signals.signals
-            for signal in signals:
-                map_primitive_id = signal.map_primitive_id
-                # Each signal has a list of lights
-                for light in signal.lights:
-                    color = light.color
-                    break
-                v2i_traffic_signals_id.append(map_primitive_id)
-                v2i_traffic_signals_colors.append(color)
-            return v2i_traffic_signals_id, v2i_traffic_signals_colors
     
     def manage_traffic_lights(self, look_ahead_point, look_ahead_point_index, search_area_as_lanes):
-        v2i_traffic_signals_id, v2i_traffic_signals_colors = self.get_trafficSignals()
+      
+        v2i_traffic_signals_id = list(self.trafficSignal.v2i_traffic_signals_id)
+        v2i_traffic_signals_colors = list(self.trafficSignal.v2i_traffic_signals_colors)
 
         current_lane = self.route[self.current_lane_index]
         lane_obj = self.find_lane_by_name(current_lane)
