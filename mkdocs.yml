@@ -75,7 +75,6 @@ nav:
     - Git Branch: ProjectGuide/GitBranch/index.md
   
   - Simple-AV: 
-    - Introduction: Simple-AV/Description/index.md
     - Setting up the System: Simple-AV/SystemSetup/index.md
     - Build Awsim msg: Simple-AV/Add Awsim msg/index.md
     - Communicating with AWSIM: Simple-AV/CommunicatingWithAWSIM/index.md
