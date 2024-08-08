@@ -9,6 +9,12 @@ def generate_launch_description():
             name='localization_node',
             output='screen'
         ),
+         Node(
+            package='simple_av',
+            executable='perception',
+            name='perception_node',
+            output='screen'
+        ),
         Node(
             package='simple_av',
             executable='planning',
