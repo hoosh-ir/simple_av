@@ -22,9 +22,7 @@ By following this guide, you will create a development environment that supports
 
 ## Setting up AWSIM on Window
 
-ou can install AWSIM using the <i>quick start demo</i> provided in the [AWSIM documentation](https://tier4.github.io/AWSIM/GettingStarted/QuickStartDemo/). This gives you access to Unity and AWSIM, allowing you to modify the scene and objects in the simulator, change the sensors, and add new topics, messages, and vehicles.
-
-However, if you just want to test and work with simple-AV, you can use the built-in scene of AWSIM. You can download a scene of Shinjuku using the link below. The image shows the built AWSIM from the Shinjuku scene. The highlighted file is the .exe file that you need to run.
+You can use this [Shinjuku Scene](https://drive.google.com/drive/folders/1si45tzYmTi_n1QOa_Hrk3y7PM0flsKBM?usp=sharing) for testing and working on the Simple AV project. Additionally, you can install AWSIM using the  [Quick start demo](https://tier4.github.io/AWSIM/GettingStarted/QuickStartDemo/) provided in the AWSIM documentation. This will give you access to Unity and AWSIM, allowing you to modify scenes, messages, topics, and objects in the simulator.
 
 ![alt text](image.png)
 
@@ -114,8 +112,7 @@ Once again reboot your system.
 
 <b>1. Run Awsim</b>
 
-After completing the 4 steps mentioned in [System setup process](#system-setup-process), run the Awsim (if you have installed Awsim) or an Awsim Scene (you can use this provided scene: [link]())
-
+After completing the 4 steps mentioned in [System setup process](#system-setup-process), run the [Shinjuku Scene](https://drive.google.com/drive/folders/1si45tzYmTi_n1QOa_Hrk3y7PM0flsKBM?usp=sharing).
 ![alt text](image.png)
 
 
@@ -132,8 +129,3 @@ After sourcing the ROS2 you can get a topic list and see the all the topics that
 ![alt text](image-1.png)
 
 This means we have successfully setup our system and create a communication between Awsim on Windows and Ros2 on WSL. However, currently we are unable to access all of the topics and we must define message types of the topics. Please refer to [Building Messages](../../BuildingMessages/index.md) page to see the full documentation.
-
-
-## TODOs    
-- [1] Add the Awsim scene links.
-
