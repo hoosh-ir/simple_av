@@ -36,8 +36,7 @@ This repository contains the following key directories:
 To use this project, you'll need to set up a ROS 2 workspace and clone the necessary packages.
 
 ### Step 0: Setup the Environment.
-
-Check out this page in [simple av documentation](https://hoosh-ir.github.io/simple_av/Simple-AV/SystemSetup/)
+Refer to the [simple av system setup page](https://hoosh-ir.github.io/simple_av/Simple-AV/SystemSetup/) in the Simple_AV documentation for detailed instructions.
 
 ### Step 1: Create a ROS Workspace
 
@@ -63,7 +62,7 @@ cd ~/ros_ws/
 colcon build
 ```
 
-The workspace should be like below after colcon build:
+The workspace should look like this after running `colcon build`:
 ```bash
 ros_ws/
 ├── build/
@@ -102,7 +101,7 @@ Run the launch file:
 ros2 launch simple_av simple_av_launch.py
 ```
 
-Or, run the nodes:
+Or, run the nodes manually:
 ```bash
 ros2 run simple_av localization
 ros2 run simple_av perception
