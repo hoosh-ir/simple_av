@@ -78,7 +78,7 @@ nav:
     - Map (*.json): Simple-AV/JsonMap/index.md
     - Modules:
       - Localization: Simple-AV/Modules/Localization/index.md
-      - Path_planning: Simple-AV/Modules/Path_planning/index.md
+      - Planning: Simple-AV/Modules/Planning/index.md
       - Perception: Simple-AV/Modules/Perception/index.md
       - Control: Simple-AV/Modules/Control/index.md
 
