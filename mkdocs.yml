@@ -66,9 +66,9 @@ nav:
   - Getting started:
     - Quick Start Demo: GettingStarted/QuickStartDemo/index.md
     - Setup Unity Project: GettingStarted/SetupUnityProject/index.md
+    - Awsim Scenes: GettingStarted/AwsimScenes/index.md
 
   - Project guide:
-    - Shinjuku Scenes: ProjectGuide/ShinjukuScenes/index.md
     - Git Branch: ProjectGuide/GitBranch/index.md
   
   - Simple-AV: 

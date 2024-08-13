@@ -22,7 +22,7 @@ By following this guide, you will create a development environment that supports
 
 ## Setting up AWSIM on Window
 
-You can use this [Shinjuku Scene](https://drive.google.com/drive/folders/1si45tzYmTi_n1QOa_Hrk3y7PM0flsKBM?usp=sharing) for testing and working on the Simple AV project. Additionally, you can install AWSIM using the  [Quick start demo](https://tier4.github.io/AWSIM/GettingStarted/QuickStartDemo/) provided in the AWSIM documentation. This will give you access to Unity and AWSIM, allowing you to modify scenes, messages, topics, and objects in the simulator.
+You can use the provided scenes in [Awsim Scenes](../../GettingStarted/AwsimScenes/index.md) for testing and working on the Simple AV project. Additionally, you can install AWSIM using the [Quick start demo](https://tier4.github.io/AWSIM/GettingStarted/QuickStartDemo/) provided in the AWSIM documentation. This will give you access to Unity and AWSIM, allowing you to modify scenes, messages, topics, and objects in the simulator.
 
 ![alt text](image.png)
 
@@ -112,7 +112,7 @@ Once again reboot your system.
 
 <b>1. Run Awsim</b>
 
-After completing the 4 steps mentioned in [System setup process](#system-setup-process), run the [Shinjuku Scene](https://drive.google.com/drive/folders/1si45tzYmTi_n1QOa_Hrk3y7PM0flsKBM?usp=sharing).
+After completing the 4 steps mentioned in [System setup process](#system-setup-process), run one of the scenes provided in [Awsim scenes](../../GettingStarted/AwsimScenes/index.md).
 ![alt text](image.png)
 
 
