@@ -18,6 +18,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LocalizationMsg.msg"
   "msg/LookAheadMsg.msg"
   "msg/TrafficSignalsArray.msg"
+  "msg/DetectedObject.msg"
+  "msg/DetectedObjectsArray.msg"
   DEPENDENCIES geometry_msgs std_msgs
 )
 
