@@ -4,8 +4,8 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Point
 from autoware_auto_vehicle_msgs.msg import VelocityReport
-from autoware_auto_vehicle_msgs.msg import GearCommand
-from autoware_auto_control_msgs.msg import AckermannControlCommand, AckermannLateralCommand, LongitudinalCommand
+from autoware_vehicle_msgs.msg import GearCommand
+from autoware_control_msgs.msg import Control, Lateral, Longitudinal
 from autoware_auto_vehicle_msgs.msg import TurnIndicatorsCommand
 from rclpy.qos import QoSProfile, DurabilityPolicy, HistoryPolicy, ReliabilityPolicy
 from simple_av_msgs.msg import PlanningPathPlanningMsg, PlanningMotionPlanningMsg
@@ -114,7 +114,7 @@ class VehicleControl(Node):
             depth=10,
             durability=DurabilityPolicy.TRANSIENT_LOCAL
         )
-        self.control_publisher = self.create_publisher(AckermannControlCommand, '/control/command/control_cmd', qos_profile)
+        self.control_publisher = self.create_publisher(Control, '/control/command/control_cmd', qos_profile)
         self.gear_publisher = self.create_publisher(GearCommand, '/control/command/gear_cmd', qos_profile)
         self.turn_indicator_publisher = self.create_publisher(TurnIndicatorsCommand, '/control/command/turn_indicators_cmd', qos_profile)
 
@@ -190,7 +190,7 @@ class VehicleControl(Node):
             return
 
         # Steer and Velocity Control
-        control_msg = AckermannControlCommand()
+        control_msg = Control()
     
         control_msg.stamp = self.get_clock().now().to_msg()
         control_msg.lateral = self.get_lateral_command()
@@ -217,7 +217,7 @@ class VehicleControl(Node):
 
     
     def get_lateral_command(self):
-        lateral_command = AckermannLateralCommand()
+        lateral_command = Lateral()
         if self.motion_plan.status.data == "Park":
             print("debug PARK")
             lateral_command.steering_tire_angle = 0.0
@@ -249,14 +249,15 @@ class VehicleControl(Node):
                 self.get_logger().warning("Full stop!")
                 target_speed = 0.0
 
+        print("target speed: ", target_speed)
         accel = self.pid_controller.updatePID(current_speed, target_speed, time.time() * self.sim_clock_rate)
         if accel > self.maximum_accel:
             accel = self.maximum_accel
         if accel < self.maximum_braking_accel:
             accel = self.maximum_braking_accel
 
-        longitudinal_command = LongitudinalCommand()
-        longitudinal_command.speed = self.velocity_report.longitudinal_velocity
+        longitudinal_command = Longitudinal()
+        longitudinal_command.velocity = self.velocity_report.longitudinal_velocity
         longitudinal_command.acceleration = accel
 
         # TODO: LookAhead from PathPlanning node no longer publishes stop point, read it from the obstacle avoidance msg
